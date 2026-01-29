@@ -39,6 +39,9 @@ Examples:
   # Start a new PRD generation
   python -m app.main "Build a project management tool for remote teams"
 
+  # Show detailed agent trace
+  python -m app.main "HIPAA-compliant patient portal" --verbose
+
   # Resume an existing run
   python -m app.main --resume abc123-def456-...
 
@@ -64,6 +67,12 @@ Examples:
         "--list",
         action="store_true",
         help="List all available runs"
+    )
+
+    parser.add_argument(
+        "--verbose", "-v",
+        action="store_true",
+        help="Show detailed agent trace and execution logs"
     )
 
     return parser
@@ -108,12 +117,13 @@ def display_runs_table(console: Console) -> None:
     log_info(f"Total runs: {len(runs)}")
 
 
-def display_run_summary(state: State, console: Console) -> None:
+def display_run_summary(state: State, console: Console, verbose: bool = False) -> None:
     """Display a summary of the current run.
 
     Args:
         state: The state to summarize
         console: Rich console instance for output
+        verbose: If True, show detailed agent trace
     """
     log_section("Run Summary", console)
 
@@ -121,6 +131,26 @@ def display_run_summary(state: State, console: Console) -> None:
     console.print(f"[bold]Status:[/bold] {state.status}")
     console.print(f"[bold]Created:[/bold] {state.created_at[:19]}")
     console.print(f"\n[bold]Product Idea:[/bold]\n{state.metadata.raw_idea}")
+
+    # Show extracted metadata if available
+    if state.metadata.domain:
+        console.print("\n")
+        log_success("Clarification Complete", console)
+
+        table = Table(title="Extracted Metadata", show_header=True, header_style="bold magenta")
+        table.add_column("Field", style="cyan", width=20)
+        table.add_column("Value", style="white")
+
+        table.add_row("Domain", state.metadata.domain)
+        table.add_row("Industry Tags", ", ".join(state.metadata.industry_tags))
+        table.add_row("Target User", state.metadata.target_user)
+        table.add_row("Geography", state.metadata.geography)
+
+        compliance = ", ".join(state.metadata.compliance_contexts) if state.metadata.compliance_contexts else "None"
+        table.add_row("Compliance", compliance)
+        table.add_row("Status", state.metadata.clarification_status)
+
+        console.print(table)
 
     # Show task board if available
     if state.task_board:
@@ -148,15 +178,33 @@ def display_run_summary(state: State, console: Console) -> None:
         last_action = state.agent_trace[-1]
         console.print(f"  Last: {last_action.agent} - {last_action.action}")
 
+        # Show detailed trace if verbose
+        if verbose:
+            console.print("\n[bold cyan]Agent Trace:[/bold cyan]")
+            trace_table = Table(show_header=True, header_style="bold cyan")
+            trace_table.add_column("Turn", style="dim", width=6)
+            trace_table.add_column("Agent", style="yellow", width=15)
+            trace_table.add_column("Action", style="white")
+
+            for entry in state.agent_trace:
+                trace_table.add_row(
+                    str(entry.turn),
+                    entry.agent,
+                    entry.action[:80] + "..." if len(entry.action) > 80 else entry.action
+                )
+
+            console.print(trace_table)
+
     console.print()
 
 
-def create_new_run(idea: str, console: Console) -> int:
+def create_new_run(idea: str, console: Console, verbose: bool = False) -> int:
     """Create and execute a new PRD generation run.
 
     Args:
         idea: The product idea description
         console: Rich console instance for output
+        verbose: If True, show detailed execution logs
 
     Returns:
         Exit code (0 for success, 1 for error)
@@ -195,11 +243,16 @@ def create_new_run(idea: str, console: Console) -> int:
         save_state(final_state)
 
         # Display summary
-        display_run_summary(final_state, console)
+        display_run_summary(final_state, console, verbose=verbose)
 
         if final_state.status == "done":
             log_success("PRD generation completed successfully!")
             log_info(f"Output saved to: data/runs/{final_state.run_id}.json")
+
+            # Show next steps
+            if final_state.metadata.domain and not state.research_plan.queries:
+                console.print("\n[yellow]Next Step: Run ResearchPlannerAgent (coming soon)[/yellow]")
+
             return 0
         else:
             log_error(f"PRD generation ended with status: {final_state.status}")
@@ -210,12 +263,13 @@ def create_new_run(idea: str, console: Console) -> int:
         return 1
 
 
-def resume_run(run_id: str, console: Console) -> int:
+def resume_run(run_id: str, console: Console, verbose: bool = False) -> int:
     """Resume an existing PRD generation run.
 
     Args:
         run_id: The run ID to resume
         console: Rich console instance for output
+        verbose: If True, show detailed execution logs
 
     Returns:
         Exit code (0 for success, 1 for error)
@@ -229,7 +283,7 @@ def resume_run(run_id: str, console: Console) -> int:
         log_success("Loaded existing run state")
 
         # Display current status
-        display_run_summary(state, console)
+        display_run_summary(state, console, verbose=verbose)
 
         if state.status == "done":
             log_info("This run is already complete.")
@@ -256,7 +310,7 @@ def resume_run(run_id: str, console: Console) -> int:
         save_state(final_state)
 
         # Display summary
-        display_run_summary(final_state, console)
+        display_run_summary(final_state, console, verbose=verbose)
 
         if final_state.status == "done":
             log_success("PRD generation completed successfully!")
@@ -301,11 +355,11 @@ def main() -> int:
 
     # Handle --resume
     if args.resume:
-        return resume_run(args.resume, console)
+        return resume_run(args.resume, console, verbose=args.verbose)
 
     # Handle new run
     if args.idea:
-        return create_new_run(args.idea, console)
+        return create_new_run(args.idea, console, verbose=args.verbose)
 
     # No valid arguments provided
     parser.print_help()
