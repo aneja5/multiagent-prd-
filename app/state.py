@@ -142,6 +142,55 @@ class State(BaseModel):
     task_board: List[Task] = Field(default_factory=list)
     agent_trace: List[AgentTraceEntry] = Field(default_factory=list)
 
+    def get_queries_by_category(self, category: str) -> List[Query]:
+        """Get all queries in a specific category.
+
+        Args:
+            category: The category to filter by (competitor, pain_points, workflow, compliance)
+
+        Returns:
+            List of Query objects in the specified category
+        """
+        return [q for q in self.research_plan.queries if q.category == category]
+
+    def get_high_priority_queries(self) -> List[Query]:
+        """Get all high priority queries.
+
+        Returns:
+            List of Query objects with priority "high"
+        """
+        return [q for q in self.research_plan.queries if q.priority == "high"]
+
+    def mark_query_done(self, query_id: str) -> None:
+        """Mark a query as done by its ID.
+
+        Args:
+            query_id: The ID of the query to mark as done
+        """
+        for query in self.research_plan.queries:
+            if query.id == query_id:
+                query.status = "done"
+                break
+
+    def get_pending_queries(self) -> List[Query]:
+        """Get all pending queries.
+
+        Returns:
+            List of Query objects with status "pending"
+        """
+        return [q for q in self.research_plan.queries if q.status == "pending"]
+
+    def get_queries_by_priority(self, priority: str) -> List[Query]:
+        """Get all queries with a specific priority.
+
+        Args:
+            priority: The priority to filter by (high, medium, low)
+
+        Returns:
+            List of Query objects with the specified priority
+        """
+        return [q for q in self.research_plan.queries if q.priority == priority]
+
 
 def get_runs_dir() -> Path:
     """Get the directory for storing run data.

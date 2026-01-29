@@ -12,7 +12,6 @@ from openai import OpenAI
 from rich.console import Console
 from rich.table import Table
 
-from agents.clarification import ClarificationAgent
 from app.config import ConfigurationError, get_config
 from app.logger import get_logger, log_error, log_info, log_section, log_success
 from app.orchestrator import Orchestrator
@@ -154,16 +153,37 @@ def display_run_summary(state: State, console: Console, verbose: bool = False) -
 
     # Show task board if available
     if state.task_board:
-        console.print(f"\n[bold]Tasks:[/bold] {len(state.task_board)} total")
+        console.print()
+        task_table = Table(title="Task Board", show_header=True, header_style="bold cyan")
+        task_table.add_column("ID", style="dim", width=6)
+        task_table.add_column("Task", style="white", width=40)
+        task_table.add_column("Owner", style="cyan", width=15)
+        task_table.add_column("Status", style="yellow", width=10)
+
+        for task in state.task_board:
+            status_color = {
+                "done": "green",
+                "doing": "yellow",
+                "pending": "dim",
+                "blocked": "red"
+            }.get(task.status, "white")
+
+            task_table.add_row(
+                task.id,
+                task.description,
+                task.owner,
+                f"[{status_color}]{task.status}[/{status_color}]"
+            )
+
+        console.print(task_table)
+
+        # Summary counts
         pending = sum(1 for t in state.task_board if t.status == "pending")
         doing = sum(1 for t in state.task_board if t.status == "doing")
         done = sum(1 for t in state.task_board if t.status == "done")
         blocked = sum(1 for t in state.task_board if t.status == "blocked")
 
-        console.print(f"  - Pending: {pending}")
-        console.print(f"  - In Progress: {doing}")
-        console.print(f"  - Done: {done}")
-        console.print(f"  - Blocked: {blocked}")
+        console.print(f"\n[dim]Summary: {done} done, {doing} in progress, {pending} pending, {blocked} blocked[/dim]")
 
     # Show research progress
     if state.research_plan.queries:
@@ -224,17 +244,11 @@ def create_new_run(idea: str, console: Console, verbose: bool = False) -> int:
         config = get_config()
         client = OpenAI(api_key=config.openai_api_key)
 
-        # Initialize orchestrator
-        orchestrator = Orchestrator(client)
-
-        # Register agents
-        log_info("Registering agents...")
-        orchestrator.register_agent(ClarificationAgent("clarification", client))
-        # TODO: Register additional agents here
-        # orchestrator.register_agent(ResearchPlannerAgent("research_planner", client))
-        # ... etc
+        # Initialize orchestrator (agents are auto-registered)
+        orchestrator = Orchestrator(client, console=console)
 
         log_info("Starting orchestration...")
+        log_info(f"Available agents: {list(orchestrator.agents.keys())}")
 
         # Run orchestration
         final_state = orchestrator.run(state)
@@ -246,12 +260,19 @@ def create_new_run(idea: str, console: Console, verbose: bool = False) -> int:
         display_run_summary(final_state, console, verbose=verbose)
 
         if final_state.status == "done":
-            log_success("PRD generation completed successfully!")
+            log_success("All available agents completed successfully!")
             log_info(f"Output saved to: data/runs/{final_state.run_id}.json")
 
-            # Show next steps
-            if final_state.metadata.domain and not state.research_plan.queries:
-                console.print("\n[yellow]Next Step: Run ResearchPlannerAgent (coming soon)[/yellow]")
+            # Show what was accomplished
+            if final_state.research_plan.queries:
+                console.print(f"\n[green]Generated {len(final_state.research_plan.queries)} research queries[/green]")
+
+            # Show next steps for unimplemented agents
+            pending_tasks = [t for t in final_state.task_board if t.status == "pending"]
+            if pending_tasks:
+                console.print("\n[yellow]Pending tasks (agents not yet implemented):[/yellow]")
+                for task in pending_tasks:
+                    console.print(f"  [dim]- {task.description} ({task.owner})[/dim]")
 
             return 0
         else:
@@ -293,15 +314,11 @@ def resume_run(run_id: str, console: Console, verbose: bool = False) -> int:
         config = get_config()
         client = OpenAI(api_key=config.openai_api_key)
 
-        # Initialize orchestrator
-        orchestrator = Orchestrator(client)
-
-        # Register agents
-        log_info("Registering agents...")
-        orchestrator.register_agent(ClarificationAgent("clarification", client))
-        # TODO: Register additional agents here
+        # Initialize orchestrator (agents are auto-registered)
+        orchestrator = Orchestrator(client, console=console)
 
         log_info("Resuming orchestration...")
+        log_info(f"Available agents: {list(orchestrator.agents.keys())}")
 
         # Run orchestration
         final_state = orchestrator.run(state)
