@@ -12,6 +12,7 @@ from openai import OpenAI
 from rich.console import Console
 from rich.table import Table
 
+from agents.clarification import ClarificationAgent
 from app.config import ConfigurationError, get_config
 from app.logger import get_logger, log_error, log_info, log_section, log_success
 from app.orchestrator import Orchestrator
@@ -178,8 +179,10 @@ def create_new_run(idea: str, console: Console) -> int:
         # Initialize orchestrator
         orchestrator = Orchestrator(client)
 
-        # TODO: Register agents here
-        # orchestrator.register_agent(ClarificationAgent("clarification", client))
+        # Register agents
+        log_info("Registering agents...")
+        orchestrator.register_agent(ClarificationAgent("clarification", client))
+        # TODO: Register additional agents here
         # orchestrator.register_agent(ResearchPlannerAgent("research_planner", client))
         # ... etc
 
@@ -239,7 +242,10 @@ def resume_run(run_id: str, console: Console) -> int:
         # Initialize orchestrator
         orchestrator = Orchestrator(client)
 
-        # TODO: Register agents here
+        # Register agents
+        log_info("Registering agents...")
+        orchestrator.register_agent(ClarificationAgent("clarification", client))
+        # TODO: Register additional agents here
 
         log_info("Resuming orchestration...")
 

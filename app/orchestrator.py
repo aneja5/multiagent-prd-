@@ -74,18 +74,24 @@ class Orchestrator:
             iteration += 1
             self.logger.info(f"Orchestration iteration {iteration}/{max_iterations}")
 
-            # TODO: Implement agent selection logic
-            # For now, this is just a skeleton
-            # Future implementation will:
-            # 1. Analyze task board
-            # 2. Determine which agent should run next
-            # 3. Execute that agent
-            # 4. Update state
-            # 5. Check for completion or blocking conditions
+            # Select next agent to run
+            next_agent = self.select_next_agent(state)
 
-            # Placeholder: just save state and break
-            save_state(state)
-            break
+            if next_agent is None:
+                self.logger.info("No more agents to run, marking as done")
+                state.status = "done"
+                break
+
+            # Execute the selected agent
+            self.logger.info(f"Running agent: {next_agent.name}")
+            try:
+                state = next_agent.run(state)
+                save_state(state)
+            except Exception as e:
+                self.logger.error(f"Agent {next_agent.name} failed: {e}")
+                state.status = "blocked"
+                save_state(state)
+                break
 
         if iteration >= max_iterations:
             self.logger.warning(
@@ -100,7 +106,11 @@ class Orchestrator:
     def select_next_agent(self, state: State) -> Optional[BaseAgent]:
         """Determine which agent should run next based on state.
 
-        TODO: Implement intelligent agent selection logic.
+        Current simple logic:
+        1. If clarification hasn't been run yet (no domain set), run clarification agent
+        2. Otherwise, no more agents (for now)
+
+        TODO: Implement more sophisticated agent selection logic.
 
         Args:
             state: The current state
@@ -108,5 +118,13 @@ class Orchestrator:
         Returns:
             The next agent to run, or None if orchestration should stop
         """
-        # Placeholder implementation
+        # Simple workflow for now: just run clarification once
+        # Check if clarification has been run (domain is set)
+        if not state.metadata.domain:
+            # Clarification hasn't run yet
+            for agent in self.agents:
+                if agent.name == "clarification":
+                    return agent
+
+        # No more agents to run (or clarification already completed)
         return None
