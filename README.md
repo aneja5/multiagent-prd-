@@ -2,17 +2,16 @@
 
 A sophisticated tool that generates research-backed Product Requirements Documents (PRDs) using multiple AI agents coordinating through a shared state object. Built with the ReAct (Reasoning + Acting) framework.
 
-## 🎉 Day 1 Complete!
+## 🎉 Day 2 Complete!
 
-The foundation is built and the first agent is live! Here's what's working:
+Two agents are live and the orchestrator is running! Here's what's working:
 
-- ✅ **Project Scaffolding** - Full application structure with config, logging, state management
-- ✅ **State Management** - Pydantic models with persistence, resumable runs
 - ✅ **ClarificationAgent** - Extracts structured metadata from product ideas
-- ✅ **CLI Interface** - Beautiful Rich-formatted output with verbose mode
-- ✅ **Test Suite** - 11 passing tests with 100% coverage of ClarificationAgent
-- ⏳ **ResearchPlannerAgent** - Coming in Day 2
-- ⏳ **SearchAgent** - Coming in Day 3
+- ✅ **PlannerAgent** - Generates 15-20 domain-specific research queries
+- ✅ **DAG Orchestrator** - Manages task dependencies and agent sequencing
+- ✅ **Multi-Domain Support** - Tested across fintech, healthcare, devtools, ecommerce, real estate
+- ✅ **Test Suite** - 37 passing tests
+- ⏳ **ResearcherAgent** - Coming in Day 3
 - ⏳ **SynthesisAgent** - Coming in Day 4
 - ⏳ **PRDWriterAgent** - Coming in Day 5
 
@@ -20,6 +19,7 @@ The foundation is built and the first agent is live! Here's what's working:
 
 This tool transforms a simple product idea into a comprehensive PRD by:
 - ✅ **Clarifying ambiguous requirements** through intelligent metadata extraction (DONE)
+- ✅ **Planning targeted research** with domain-specific queries and competitor analysis (DONE)
 - ⏳ Conducting web research to gather evidence and insights (COMING SOON)
 - ⏳ Analyzing competitors, pain points, and user workflows (COMING SOON)
 - ⏳ Synthesizing findings into a well-structured PRD with citations (COMING SOON)
@@ -33,44 +33,47 @@ This tool transforms a simple product idea into a comprehensive PRD by:
 - **Production-Ready**: Comprehensive error handling, logging, retry logic, and type safety
 - **Rich CLI**: Beautiful command-line interface with progress tracking and formatted output
 
-## Current Architecture (Day 1)
+## Current Architecture (Day 2)
 
 ```
 User Input: "Build a HIPAA-compliant patient portal"
-     │
-     ▼
-┌─────────────────────────────────────────┐
-│         ClarificationAgent              │
-│  (ReAct Framework)                      │
-│                                         │
-│  1. Think:  Should I run?               │
-│  2. Act:    Call LLM with prompt        │
-│  3. Observe: Parse structured output    │
-│  4. Update:  Set metadata fields        │
-│  5. Reflect: Log to trace               │
-└─────────────────┬───────────────────────┘
-                  │
-                  ▼
-         ┌──────────────────┐
-         │  Shared State    │
-         │                  │
-         │  ✅ metadata:    │
-         │    - domain      │
-         │    - tags        │
-         │    - target_user │
-         │    - geography   │
-         │    - compliance  │
-         │                  │
-         │  ⏳ research_plan│
-         │  ⏳ evidence     │
-         │  ⏳ insights     │
-         │  ⏳ prd          │
-         └──────────────────┘
-                  │
-                  ▼
-     Saved to: data/runs/{run_id}.json
-
-⏳ More agents coming in Day 2+
+                          │
+                          ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    DAG Orchestrator                         │
+│  - Task dependency resolution                               │
+│  - Agent scheduling                                         │
+│  - State checkpointing                                      │
+└─────────────────────────┬───────────────────────────────────┘
+                          │
+          ┌───────────────┴───────────────┐
+          ▼                               ▼
+┌──────────────────────┐      ┌──────────────────────┐
+│  ClarificationAgent  │      │    PlannerAgent      │
+│  ✅ COMPLETE         │─────▶│    ✅ COMPLETE       │
+│                      │      │                      │
+│  Extracts:           │      │  Generates:          │
+│  - domain            │      │  - 15-20 queries     │
+│  - industry_tags     │      │  - 4 categories      │
+│  - target_user       │      │  - priority levels   │
+│  - geography         │      │  - expected sources  │
+│  - compliance        │      │                      │
+└──────────────────────┘      └──────────────────────┘
+          │                               │
+          └───────────────┬───────────────┘
+                          ▼
+                 ┌──────────────────┐
+                 │   Shared State   │
+                 │                  │
+                 │  ✅ metadata     │
+                 │  ✅ research_plan│
+                 │  ⏳ evidence     │
+                 │  ⏳ insights     │
+                 │  ⏳ prd          │
+                 └──────────────────┘
+                          │
+                          ▼
+             Saved to: data/runs/{run_id}.json
 ```
 
 ## Full Architecture (When Complete)
@@ -204,17 +207,20 @@ multiagent-prd/
 │   ├── config.py            # Configuration management ✅
 │   ├── logger.py            # Logging setup ✅
 │   ├── state.py             # State schema and persistence ✅
-│   └── orchestrator.py      # Agent coordination ✅
+│   └── orchestrator.py      # DAG-based agent coordination ✅
 ├── agents/
 │   ├── __init__.py
 │   ├── base_agent.py        # Base agent with ReAct framework ✅
 │   ├── clarification.py     # ClarificationAgent ✅
+│   ├── planner.py           # PlannerAgent ✅
 │   ├── prompts/
-│   │   └── clarification.txt # Prompt template ✅
+│   │   ├── clarification.txt # Clarification prompt ✅
+│   │   └── planning.txt      # Planning prompt ✅
 │   └── README.md            # Agent documentation ✅
 ├── tests/
 │   ├── __init__.py
-│   └── test_clarification.py # Test suite (11 tests) ✅
+│   ├── test_clarification.py # ClarificationAgent tests (11) ✅
+│   └── test_planner.py       # PlannerAgent tests (26) ✅
 ├── data/
 │   ├── runs/                # Saved run states (auto-created)
 │   └── logs/                # Application logs (auto-created)
@@ -396,35 +402,64 @@ orchestrator.register_agent(MyAgent("my_agent", client))
 - Total LOC: ~3,500 lines
 - Test Coverage: 11 tests, 100% passing
 - API Cost per run: ~$0.01-0.02
-- Execution Time: 2-5 seconds
+- Execution Time: 2-5 seconds (clarification only)
 
 ---
 
-### 📅 Day 2 (TBD) - ResearchPlannerAgent
+### 📅 Day 2 (January 29, 2026) ✅ COMPLETE
 
-**Planned:**
-- [ ] ResearchPlannerAgent implementation
-- [ ] Generate targeted research queries from metadata
-- [ ] Query categorization (competitors, pain points, workflows, compliance)
-- [ ] Priority assignment (high/medium/low)
-- [ ] Populate `state.research_plan.queries`
+**What Was Built:**
+- ✅ **PlannerAgent** - Full implementation with:
+  - Domain-specific research query generation (15-20 queries per run)
+  - 4 query categories: competitor, pain_points, workflow, compliance
+  - Priority assignment (high/medium/low)
+  - Expected sources tagging (forums, reviews, pricing_pages, etc.)
+  - Post-processing for year markers and duplicate detection
+  - 437-line prompt with domain-specific competitor lists
+  - 26 comprehensive tests (all passing)
+- ✅ **DAG Orchestrator** - Complete rewrite with:
+  - Task dependency resolution
+  - Agent registry with auto-discovery
+  - State checkpointing after each agent
+  - Retry logic with exponential backoff
+- ✅ **Multi-domain testing** across 5 verticals:
+  - Fintech (invoicing, expense tracking)
+  - Healthcare (telemedicine, patient portals)
+  - DevTools (security scanning, CI/CD)
+  - Real Estate (CRM, property management)
+  - Ecommerce (inventory, order management)
 
-**Expected Output:**
+**Key Achievements:**
+- 349 lines of PlannerAgent code
+- 437-line prompt with 3 few-shot examples
+- Query quality: 60-80% include year markers
+- Fuzzy duplicate detection (80% threshold)
+- All 37 tests passing
+
+**Sample Output:**
 ```python
 state.research_plan.queries = [
   Query(
     id="Q1",
-    text="HIPAA-compliant patient portal competitors",
+    text="athenahealth vs Kareo pricing small practice 2024",
     category="competitor",
-    priority="high"
+    priority="high",
+    expected_sources=["pricing_pages", "comparison_sites"]
   ),
-  # ... 10-15 more queries
+  Query(
+    id="Q2",
+    text="small clinic EHR implementation problems reddit",
+    category="pain_points",
+    priority="high",
+    expected_sources=["forums"]
+  ),
+  # ... 13-18 more queries
 ]
 ```
 
 ---
 
-### 📅 Day 3 (TBD) - SearchAgent & Web Research
+### 📅 Day 3 (TBD) - ResearcherAgent & Web Search
 
 **Planned:**
 - [ ] SearchAgent implementation
@@ -468,7 +503,8 @@ state.research_plan.queries = [
 - [x] **ClarificationAgent** - Full implementation with tests
 
 ### Phase 2: Core Agents (Days 2-3)
-- [ ] Research Planner Agent
+- [x] Research Planner Agent ✅
+- [x] DAG-based Orchestrator ✅
 - [ ] Web Search Tool Integration
 - [ ] Search Execution Agent
 - [ ] Evidence collection and storage
@@ -539,9 +575,11 @@ mypy app/ agents/
 black app/ agents/
 ```
 
-### Test Coverage (Day 1)
+### Test Coverage (Day 2)
 
-**ClarificationAgent** - 11 tests, all passing ✅
+**Total: 37 tests, all passing ✅**
+
+**ClarificationAgent** - 11 tests ✅
 - ✅ test_freelance_invoice_tool - Fintech domain extraction
 - ✅ test_healthcare_portal - Healthcare domain with compliance
 - ✅ test_devtools_security - DevTools domain
@@ -553,6 +591,20 @@ black app/ agents/
 - ✅ test_response_validation - Pydantic validation
 - ✅ test_industry_tags_constraints - Min/max validation (2-4 tags)
 - ✅ test_clarification_response_model - Model validation
+
+**PlannerAgent** - 26 tests ✅
+- ✅ test_fintech_queries - Generates fintech-specific queries
+- ✅ test_healthcare_queries - Healthcare domain with HIPAA queries
+- ✅ test_devtools_queries - Security/DevOps query generation
+- ✅ test_query_count_range - Validates 15-20 query count
+- ✅ test_category_distribution - Validates category requirements
+- ✅ test_priority_distribution - High/medium/low balance
+- ✅ test_duplicate_detection - Fuzzy matching at 80% threshold
+- ✅ test_year_markers - 60%+ queries include year
+- ✅ test_competitor_names - Named competitors in queries
+- ✅ test_expected_sources - Source tagging validation
+- ✅ test_skip_if_already_planned - Idempotent execution
+- ✅ + 15 additional edge case tests
 
 ## Contributing
 
