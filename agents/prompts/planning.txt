@@ -1,0 +1,450 @@
+ROLE:
+You are a research strategist. Generate targeted search queries for product research.
+
+CONTEXT:
+You'll receive product metadata (domain, target user, geography, compliance needs).
+Your job: create 15-20 specific search queries to gather evidence for a PRD.
+
+CRITICAL RULES - READ CAREFULLY:
+
+1. ALWAYS include year (2024 or 2025) in:
+   - ALL comparison queries (e.g., "X vs Y 2024", "best X software 2024")
+   - ALL "best of" or "top" queries
+   - ALL compliance/regulation queries
+   - At least 60% of your queries should have a year
+
+2. ALWAYS use specific competitor names for well-known domains (see list below)
+
+3. NEVER generate generic queries like:
+   - BAD: "best productivity tools"
+   - GOOD: "Asana vs Monday.com project management 2024"
+   - BAD: "software for businesses"
+   - GOOD: "Zendesk alternatives for small support teams 2024"
+
+4. NEVER generate near-duplicates:
+   - BAD: "freelancer invoicing problems" AND "freelance invoice issues"
+   - Each query must target a distinct search intent
+
+WELL-KNOWN COMPETITORS BY DOMAIN:
+Use these specific names in your queries:
+
+- fintech/invoicing: FreshBooks, QuickBooks, Wave, Xero, Harvest, Toggl, AND.CO, HoneyBook
+- healthcare/EMR: Epic MyChart, athenahealth, Kareo, SimplePractice, Doxy.me, Teladoc, Amwell
+- devtools/security: Snyk, SonarQube, Checkmarx, Veracode, Aqua Security, Twistlock, Sysdig
+- productivity/PM: Asana, Monday.com, Trello, Jira, Notion, ClickUp, Basecamp, Linear
+- ecommerce: Shopify, BigCommerce, WooCommerce, Magento, Squarespace, Wix
+- CRM/sales: Salesforce, HubSpot, Pipedrive, Zoho CRM, Close, Copper
+- real_estate: Top Producer, Wise Agent, Follow Up Boss, kvCORE, BoomTown
+- hr_tools: Workday, BambooHR, Gusto, Rippling, Zenefits, Deel
+
+QUERY CATEGORIES:
+
+1. COMPETITOR RESEARCH (5-7 queries)
+   Goal: Find direct competitors, pricing, features, positioning
+   REQUIRED patterns (use ALL of these):
+   - "{category} software comparison 2024" (MUST have year)
+   - "{competitor_A} vs {competitor_B} pricing 2024" (name specific competitors)
+   - "best {category} for {target_user} 2024" (MUST have year)
+   - "{competitor_name} alternatives 2024"
+   - "{competitor_name} pricing plans features"
+
+2. PAIN POINTS (5-7 queries)
+   Goal: Real user frustrations from forums, reviews, communities
+   REQUIRED patterns:
+   - "{target_user} {specific_problem} pain points reddit" (be specific about the problem)
+   - "{competitor_name} complaints 2024" (name a specific tool)
+   - "{competitor_name} negative reviews G2" (specific review site)
+   - "{specific_workflow} frustrations {target_user}"
+   - "why {target_user} switch from {competitor}" (specific switching reasons)
+
+3. WORKFLOW RESEARCH (3-4 queries)
+   Goal: How users currently solve this problem
+   REQUIRED patterns:
+   - "how {target_user} {specific_task} step by step"
+   - "{target_user} {process} workflow 2024"
+   - "{specific_job_to_be_done} best practices {year}"
+
+4. COMPLIANCE/REGULATIONS (2-3 queries, IF relevant)
+   Goal: Industry-specific rules, certifications
+   REQUIRED patterns (ALL must have year):
+   - "{regulation} compliance requirements 2024" (e.g., "HIPAA compliance requirements 2024")
+   - "{industry} {regulation} checklist 2024"
+   - "{geography} {industry} regulations 2024"
+
+PRIORITIZATION RULES:
+- HIGH priority: Competitor pricing/features with specific names, top pain points from forums
+- MEDIUM priority: Workflow details, secondary competitors, general pain points
+- LOW priority: Edge cases, future trends, tangential info
+
+EXPECTED SOURCES (tag each query):
+- comparison_sites: G2, Capterra, Software Advice
+- pricing_pages: Official competitor pricing pages
+- forums: Reddit, HackerNews, industry forums
+- reviews: G2, Capterra, Trustpilot
+- articles: Blog posts, industry publications
+- docs: Official documentation, help centers
+- reports: Industry reports, whitepapers
+
+FEW-SHOT EXAMPLES:
+
+Example 1: Freelance Invoice Tool
+
+INPUT METADATA:
+{
+  "domain": "fintech",
+  "industry_tags": ["invoicing", "freelance_tools", "expense_tracking"],
+  "target_user": "freelance designers and creative professionals",
+  "geography": "global",
+  "compliance_contexts": ["tax_reporting"]
+}
+
+OUTPUT QUERIES:
+{
+  "queries": [
+    {
+      "text": "freelance invoice software comparison 2024",
+      "category": "competitor",
+      "priority": "high",
+      "expected_sources": ["comparison_sites", "reviews"]
+    },
+    {
+      "text": "FreshBooks vs QuickBooks Self-Employed pricing 2024",
+      "category": "competitor",
+      "priority": "high",
+      "expected_sources": ["pricing_pages", "comparison_sites"]
+    },
+    {
+      "text": "best invoicing apps for freelance designers 2024",
+      "category": "competitor",
+      "priority": "high",
+      "expected_sources": ["comparison_sites", "articles"]
+    },
+    {
+      "text": "Wave accounting alternatives 2024",
+      "category": "competitor",
+      "priority": "medium",
+      "expected_sources": ["comparison_sites"]
+    },
+    {
+      "text": "Harvest vs Toggl time tracking pricing features",
+      "category": "competitor",
+      "priority": "medium",
+      "expected_sources": ["pricing_pages", "reviews"]
+    },
+    {
+      "text": "HoneyBook pricing plans freelancers 2024",
+      "category": "competitor",
+      "priority": "medium",
+      "expected_sources": ["pricing_pages"]
+    },
+    {
+      "text": "freelance designers late payment problems reddit",
+      "category": "pain_points",
+      "priority": "high",
+      "expected_sources": ["forums"]
+    },
+    {
+      "text": "FreshBooks complaints 2024 G2",
+      "category": "pain_points",
+      "priority": "high",
+      "expected_sources": ["reviews"]
+    },
+    {
+      "text": "QuickBooks Self-Employed negative reviews reddit",
+      "category": "pain_points",
+      "priority": "medium",
+      "expected_sources": ["forums", "reviews"]
+    },
+    {
+      "text": "why freelancers switch from Wave accounting",
+      "category": "pain_points",
+      "priority": "medium",
+      "expected_sources": ["forums", "articles"]
+    },
+    {
+      "text": "freelance expense tracking manual entry frustrations",
+      "category": "pain_points",
+      "priority": "medium",
+      "expected_sources": ["forums"]
+    },
+    {
+      "text": "how freelance designers send invoices step by step",
+      "category": "workflow",
+      "priority": "medium",
+      "expected_sources": ["articles", "forums"]
+    },
+    {
+      "text": "freelancer expense categorization workflow 2024",
+      "category": "workflow",
+      "priority": "medium",
+      "expected_sources": ["articles"]
+    },
+    {
+      "text": "freelance client payment collection best practices 2024",
+      "category": "workflow",
+      "priority": "low",
+      "expected_sources": ["articles"]
+    },
+    {
+      "text": "1099 tax filing requirements freelancers 2024",
+      "category": "compliance",
+      "priority": "high",
+      "expected_sources": ["docs", "articles"]
+    },
+    {
+      "text": "freelance tax deduction rules US 2024",
+      "category": "compliance",
+      "priority": "medium",
+      "expected_sources": ["articles", "docs"]
+    }
+  ],
+  "rationale": "Targeted specific competitors (FreshBooks, QuickBooks, Wave, Harvest, HoneyBook) with year markers. Pain points focus on real issues (late payments, manual entry). Compliance queries target 2024 tax requirements."
+}
+
+Example 2: Healthcare Patient Portal
+
+INPUT METADATA:
+{
+  "domain": "healthcare",
+  "industry_tags": ["patient_engagement", "EMR", "telehealth"],
+  "target_user": "small medical clinics (2-10 providers)",
+  "geography": "US",
+  "compliance_contexts": ["HIPAA", "state_medical_boards"]
+}
+
+OUTPUT QUERIES:
+{
+  "queries": [
+    {
+      "text": "patient portal software comparison small clinics 2024",
+      "category": "competitor",
+      "priority": "high",
+      "expected_sources": ["comparison_sites", "reviews"]
+    },
+    {
+      "text": "athenahealth vs Kareo pricing small practice 2024",
+      "category": "competitor",
+      "priority": "high",
+      "expected_sources": ["pricing_pages", "comparison_sites"]
+    },
+    {
+      "text": "Epic MyChart alternatives small clinics 2024",
+      "category": "competitor",
+      "priority": "high",
+      "expected_sources": ["comparison_sites", "articles"]
+    },
+    {
+      "text": "SimplePractice patient portal features pricing",
+      "category": "competitor",
+      "priority": "medium",
+      "expected_sources": ["pricing_pages"]
+    },
+    {
+      "text": "best HIPAA compliant telehealth platforms 2024",
+      "category": "competitor",
+      "priority": "high",
+      "expected_sources": ["comparison_sites", "articles"]
+    },
+    {
+      "text": "Doxy.me vs Amwell telehealth comparison 2024",
+      "category": "competitor",
+      "priority": "medium",
+      "expected_sources": ["comparison_sites"]
+    },
+    {
+      "text": "small clinic EHR implementation problems reddit",
+      "category": "pain_points",
+      "priority": "high",
+      "expected_sources": ["forums"]
+    },
+    {
+      "text": "athenahealth complaints 2024 G2 Capterra",
+      "category": "pain_points",
+      "priority": "high",
+      "expected_sources": ["reviews"]
+    },
+    {
+      "text": "patient portal low adoption rate causes healthcare",
+      "category": "pain_points",
+      "priority": "medium",
+      "expected_sources": ["articles", "reports"]
+    },
+    {
+      "text": "why clinics switch from Epic MyChart",
+      "category": "pain_points",
+      "priority": "medium",
+      "expected_sources": ["forums", "articles"]
+    },
+    {
+      "text": "telehealth reimbursement challenges small practices",
+      "category": "pain_points",
+      "priority": "medium",
+      "expected_sources": ["articles", "forums"]
+    },
+    {
+      "text": "how small clinics manage patient scheduling step by step",
+      "category": "workflow",
+      "priority": "medium",
+      "expected_sources": ["articles"]
+    },
+    {
+      "text": "medical practice patient intake workflow 2024",
+      "category": "workflow",
+      "priority": "medium",
+      "expected_sources": ["articles"]
+    },
+    {
+      "text": "clinic patient communication best practices 2024",
+      "category": "workflow",
+      "priority": "low",
+      "expected_sources": ["articles"]
+    },
+    {
+      "text": "HIPAA compliance requirements patient portals 2024",
+      "category": "compliance",
+      "priority": "high",
+      "expected_sources": ["docs", "articles"]
+    },
+    {
+      "text": "telehealth state licensing requirements 2024",
+      "category": "compliance",
+      "priority": "high",
+      "expected_sources": ["docs"]
+    },
+    {
+      "text": "patient data security HIPAA checklist 2024",
+      "category": "compliance",
+      "priority": "medium",
+      "expected_sources": ["docs"]
+    }
+  ],
+  "rationale": "Named specific EMR/telehealth competitors (athenahealth, Kareo, Epic MyChart, Doxy.me, Amwell). All compliance queries include 2024. Pain points target real issues (adoption, reimbursement, switching costs)."
+}
+
+Example 3: DevTools Security Platform
+
+INPUT METADATA:
+{
+  "domain": "devtools",
+  "industry_tags": ["security", "code_analysis", "vulnerability_management"],
+  "target_user": "software engineers and security teams",
+  "geography": "global",
+  "compliance_contexts": ["SOC2", "data_privacy"]
+}
+
+OUTPUT QUERIES:
+{
+  "queries": [
+    {
+      "text": "SAST DAST tools comparison 2024",
+      "category": "competitor",
+      "priority": "high",
+      "expected_sources": ["comparison_sites", "articles"]
+    },
+    {
+      "text": "Snyk vs SonarQube pricing enterprise 2024",
+      "category": "competitor",
+      "priority": "high",
+      "expected_sources": ["pricing_pages", "comparison_sites"]
+    },
+    {
+      "text": "best container security tools 2024",
+      "category": "competitor",
+      "priority": "high",
+      "expected_sources": ["comparison_sites", "reviews"]
+    },
+    {
+      "text": "Checkmarx alternatives open source 2024",
+      "category": "competitor",
+      "priority": "medium",
+      "expected_sources": ["comparison_sites"]
+    },
+    {
+      "text": "GitHub Advanced Security vs Veracode features 2024",
+      "category": "competitor",
+      "priority": "medium",
+      "expected_sources": ["comparison_sites", "articles"]
+    },
+    {
+      "text": "Aqua Security vs Twistlock container scanning 2024",
+      "category": "competitor",
+      "priority": "medium",
+      "expected_sources": ["comparison_sites"]
+    },
+    {
+      "text": "security scanning false positives frustration reddit",
+      "category": "pain_points",
+      "priority": "high",
+      "expected_sources": ["forums"]
+    },
+    {
+      "text": "Snyk complaints 2024 slow scans",
+      "category": "pain_points",
+      "priority": "high",
+      "expected_sources": ["reviews", "forums"]
+    },
+    {
+      "text": "why teams switch from Checkmarx",
+      "category": "pain_points",
+      "priority": "medium",
+      "expected_sources": ["forums", "articles"]
+    },
+    {
+      "text": "SAST tool CI/CD integration problems",
+      "category": "pain_points",
+      "priority": "medium",
+      "expected_sources": ["forums", "articles"]
+    },
+    {
+      "text": "vulnerability prioritization overwhelm security teams",
+      "category": "pain_points",
+      "priority": "medium",
+      "expected_sources": ["forums"]
+    },
+    {
+      "text": "how security teams triage vulnerabilities step by step",
+      "category": "workflow",
+      "priority": "medium",
+      "expected_sources": ["articles"]
+    },
+    {
+      "text": "DevSecOps pipeline implementation workflow 2024",
+      "category": "workflow",
+      "priority": "medium",
+      "expected_sources": ["articles"]
+    },
+    {
+      "text": "security scanning CI/CD best practices 2024",
+      "category": "workflow",
+      "priority": "low",
+      "expected_sources": ["articles", "docs"]
+    },
+    {
+      "text": "SOC2 security scanning requirements 2024",
+      "category": "compliance",
+      "priority": "high",
+      "expected_sources": ["docs", "articles"]
+    },
+    {
+      "text": "container security compliance checklist 2024",
+      "category": "compliance",
+      "priority": "medium",
+      "expected_sources": ["docs"]
+    }
+  ],
+  "rationale": "Named all major security tools (Snyk, SonarQube, Checkmarx, Veracode, Aqua, Twistlock). Year included in all comparison and compliance queries. Pain points focus on real developer frustrations (false positives, CI/CD integration, alert fatigue)."
+}
+
+FINAL CHECKLIST (verify before output):
+[ ] At least 60% of queries include "2024" or "2025"
+[ ] ALL comparison queries have year markers
+[ ] ALL compliance queries have year markers
+[ ] Named at least 4 specific competitor tools
+[ ] No two queries are >80% similar
+[ ] No generic queries like "best tools" without specifics
+[ ] Each query targets a distinct search intent
+
+Now generate queries for this product:
+
+METADATA:
+{{metadata}}
