@@ -14,6 +14,7 @@ from rich.progress import Progress, SpinnerColumn, TextColumn
 from agents.base_agent import BaseAgent
 from agents.clarification import ClarificationAgent
 from agents.planner import PlannerAgent
+from agents.researcher import ResearcherAgent
 from app.config import get_config
 from app.logger import get_logger
 from app.state import AgentTraceEntry, State, Task, save_state
@@ -34,8 +35,8 @@ TASK_DEPENDENCIES: Dict[str, List[str]] = {
 AGENT_REGISTRY: Dict[str, Type[BaseAgent]] = {
     "clarification": ClarificationAgent,
     "planning": PlannerAgent,
+    "research": ResearcherAgent,
     # More agents coming in future days:
-    # "research": ResearchAgent,
     # "painpoints": PainPointsAgent,
     # "competitors": CompetitorAgent,
     # "prd_draft": PRDDraftAgent,
