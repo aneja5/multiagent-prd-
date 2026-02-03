@@ -79,8 +79,17 @@ class PlannerAgent(BaseAgent):
         "articles", "docs", "reports"
     }
 
-    # Fuzzy matching threshold for duplicate detection
-    DUPLICATE_THRESHOLD = 85  # Similarity score above this is considered duplicate
+    # Fuzzy matching threshold for duplicate detection (lowered to 80% for stricter dedup)
+    DUPLICATE_THRESHOLD = 80  # Similarity score above this is considered duplicate
+
+    # Keywords that indicate a query should have a year
+    YEAR_REQUIRED_KEYWORDS = [
+        "comparison", "vs", "versus", "best", "top", "alternatives",
+        "compliance", "requirements", "regulations", "checklist"
+    ]
+
+    # Current year for appending to queries
+    CURRENT_YEAR = "2024"
 
     def __init__(self, name: str, client: OpenAI) -> None:
         """Initialize the planner agent.
@@ -201,8 +210,12 @@ class PlannerAgent(BaseAgent):
                         f"Query validation failed: {validation_result['issues']}"
                     )
 
+            # Post-process queries: add year markers, remove duplicates
+            self._log_action(state, "Post-processing queries")
+            processed_queries = self._post_process_queries(query_response.queries)
+
             # Remove duplicates if any
-            deduplicated_queries = self._remove_duplicates(query_response.queries)
+            deduplicated_queries = self._remove_duplicates(processed_queries)
 
             # 5. Update: Modify state with generated queries
             self._log_action(
@@ -551,3 +564,81 @@ class PlannerAgent(BaseAgent):
         self.logger.info(f"Removing {len(indices_to_remove)} duplicate queries")
 
         return [q for idx, q in enumerate(queries) if idx not in indices_to_remove]
+
+    def _post_process_queries(self, queries: List[QueryItem]) -> List[QueryItem]:
+        """Post-process queries to improve quality.
+
+        Performs:
+        1. Add year to comparison/compliance queries if missing
+        2. Flag generic queries for logging
+
+        Args:
+            queries: List of query items
+
+        Returns:
+            Post-processed list of query items
+        """
+        processed = []
+        year_added_count = 0
+        generic_flagged = []
+
+        for query in queries:
+            text = query.text
+            text_lower = text.lower()
+
+            # Check if query should have a year but doesn't
+            has_year = any(year in text for year in ["2024", "2025", "2023"])
+            needs_year = any(kw in text_lower for kw in self.YEAR_REQUIRED_KEYWORDS)
+
+            # Also add year to competitor and compliance categories
+            if query.category in ["competitor", "compliance"]:
+                needs_year = True
+
+            if needs_year and not has_year:
+                # Add year to the query
+                text = f"{text} {self.CURRENT_YEAR}"
+                year_added_count += 1
+
+            # Flag generic queries (for logging only)
+            generic_indicators = [
+                "best tools",
+                "software for businesses",
+                "productivity tools",
+                "best software",
+            ]
+            if any(indicator in text_lower for indicator in generic_indicators):
+                generic_flagged.append(text)
+
+            # Create new QueryItem with potentially modified text
+            processed.append(QueryItem(
+                text=text,
+                category=query.category,
+                priority=query.priority,
+                expected_sources=query.expected_sources
+            ))
+
+        if year_added_count > 0:
+            self.logger.info(f"Added year marker to {year_added_count} queries")
+
+        if generic_flagged:
+            self.logger.warning(f"Found {len(generic_flagged)} potentially generic queries: {generic_flagged[:3]}")
+
+        return processed
+
+    def _check_year_coverage(self, queries: List[QueryItem]) -> float:
+        """Check what percentage of queries have year markers.
+
+        Args:
+            queries: List of query items
+
+        Returns:
+            Percentage of queries with year markers (0.0 to 1.0)
+        """
+        if not queries:
+            return 0.0
+
+        with_year = sum(
+            1 for q in queries
+            if any(year in q.text for year in ["2024", "2025", "2023"])
+        )
+        return with_year / len(queries)

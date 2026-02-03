@@ -1,0 +1,88 @@
+# ResearcherAgent Prompt Template
+
+This is a placeholder for future LLM-based enhancements to the ResearcherAgent.
+
+## Current Implementation
+
+The ResearcherAgent is primarily tool-based and does not use LLM calls for:
+- Web searching (uses Tavily API via WebSearchTool)
+- Content fetching (uses Jina Reader via ContentFetcher)
+- Credibility scoring (uses rule-based CredibilityScorer)
+- Deduplication (uses MD5 + SimHash via Deduplicator)
+
+## Future LLM Enhancements (Day 4-5)
+
+### 1. Relevance Filtering
+
+Use LLM to filter search results by relevance before fetching full content:
+
+```
+Given the product idea: {{product_idea}}
+And research query: {{query}}
+And query category: {{category}}
+
+Rate the relevance of each search result (1-10):
+{{search_results}}
+
+Return only results with relevance >= 7.
+```
+
+### 2. Key Point Extraction
+
+Extract key insights from fetched content:
+
+```
+Given this content from {{url}}:
+{{content}}
+
+Extract key points relevant to {{category}}:
+- For competitor: features, pricing, strengths, weaknesses
+- For pain_points: user complaints, frustrations, unmet needs
+- For workflow: steps, tools used, friction points
+- For compliance: requirements, regulations, standards
+
+Return as structured JSON.
+```
+
+### 3. Evidence Tagging
+
+Auto-tag evidence with relevant categories:
+
+```
+Given this evidence:
+Title: {{title}}
+Snippet: {{snippet}}
+
+Assign relevant tags from:
+- Domain tags: {{domain_tags}}
+- Feature tags: pricing, integration, api, mobile, enterprise
+- Sentiment tags: positive, negative, neutral, mixed
+
+Return tags as JSON array.
+```
+
+### 4. Synthesis
+
+Synthesize multiple evidence items into insights:
+
+```
+Given these evidence items about {{category}}:
+{{evidence_items}}
+
+Synthesize into a coherent summary that:
+1. Identifies common themes
+2. Notes contradictions
+3. Highlights key statistics
+4. Provides confidence level
+
+Return as structured JSON with citations.
+```
+
+## Implementation Notes
+
+When implementing LLM enhancements:
+1. Use structured output mode for reliable parsing
+2. Include rate limiting to avoid API throttling
+3. Cache LLM responses where appropriate
+4. Implement fallback to rule-based approach on failure
+5. Log all LLM calls for debugging and cost tracking

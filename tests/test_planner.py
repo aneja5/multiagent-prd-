@@ -45,7 +45,7 @@ def mock_openai_client():
 @pytest.fixture
 def planner_agent(mock_openai_client):
     """Create a PlannerAgent instance with mocked client."""
-    return PlannerAgent("planner", mock_openai_client)
+    return PlannerAgent("planning", mock_openai_client)
 
 
 def create_mock_response(data: dict) -> MockOpenAIResponse:
