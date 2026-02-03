@@ -46,6 +46,12 @@ Examples:
 
   # List all runs
   python -m app.main --list
+
+  # Inspect evidence from a run
+  python -m app.main --inspect <run_id>
+  python -m app.main --inspect <run_id> --type forum
+  python -m app.main --inspect <run_id> --credibility high
+  python -m app.main --inspect <run_id> --evidence-id E5
         """
     )
 
@@ -66,6 +72,34 @@ Examples:
         "--list",
         action="store_true",
         help="List all available runs"
+    )
+
+    parser.add_argument(
+        "--inspect",
+        type=str,
+        metavar="RUN_ID",
+        help="Inspect evidence collected from a run"
+    )
+
+    parser.add_argument(
+        "--type",
+        type=str,
+        choices=["article", "forum", "docs", "pricing", "review"],
+        help="Filter evidence by type (use with --inspect)"
+    )
+
+    parser.add_argument(
+        "--credibility",
+        type=str,
+        choices=["high", "medium", "low"],
+        help="Filter evidence by credibility tier (use with --inspect)"
+    )
+
+    parser.add_argument(
+        "--evidence-id",
+        type=str,
+        metavar="ID",
+        help="Show full details for specific evidence (use with --inspect)"
     )
 
     parser.add_argument(
@@ -344,6 +378,247 @@ def resume_run(run_id: str, console: Console, verbose: bool = False) -> int:
         return 1
 
 
+def inspect_evidence(
+    run_id: str,
+    console: Console,
+    type_filter: str = None,
+    credibility_filter: str = None,
+    evidence_id: str = None
+) -> int:
+    """Inspect evidence collected from a run.
+
+    Args:
+        run_id: The run ID to inspect
+        console: Rich console instance for output
+        type_filter: Filter by evidence type
+        credibility_filter: Filter by credibility tier
+        evidence_id: Show full details for specific evidence
+
+    Returns:
+        Exit code (0 for success, 1 for error)
+    """
+    try:
+        # Load state
+        state = load_state(run_id)
+
+        if not state.evidence:
+            log_info(f"No evidence collected for run {run_id[:8]}...")
+            return 0
+
+        # If specific evidence ID requested, show full details
+        if evidence_id:
+            return display_evidence_detail(state, evidence_id, console)
+
+        # Apply filters
+        evidence = list(state.evidence)
+
+        if type_filter:
+            evidence = [e for e in evidence if e.type == type_filter]
+
+        if credibility_filter:
+            evidence = [e for e in evidence if e.credibility == credibility_filter]
+
+        # Display summary
+        log_section(f"Evidence Inspection: {run_id[:8]}...", console)
+
+        console.print(f"[bold]Product Idea:[/bold] {state.metadata.raw_idea[:80]}...")
+        console.print(f"[bold]Domain:[/bold] {state.metadata.domain}")
+        console.print()
+
+        # Show filter status
+        if type_filter or credibility_filter:
+            filters = []
+            if type_filter:
+                filters.append(f"type={type_filter}")
+            if credibility_filter:
+                filters.append(f"credibility={credibility_filter}")
+            console.print(f"[yellow]Filters applied:[/yellow] {', '.join(filters)}")
+            console.print(f"[bold]Showing {len(evidence)} of {len(state.evidence)} total sources[/bold]\n")
+        else:
+            console.print(f"[bold]Total Evidence:[/bold] {len(evidence)} sources\n")
+
+        # Summary statistics
+        display_evidence_summary(state, console)
+
+        # Evidence table
+        if evidence:
+            display_evidence_table(evidence, console)
+        else:
+            console.print("[dim]No evidence matches the specified filters.[/dim]")
+
+        # Usage hints
+        console.print("\n[dim]Tips:[/dim]")
+        console.print(f"  [dim]• View details: --evidence-id E1[/dim]")
+        console.print(f"  [dim]• Filter by type: --type forum[/dim]")
+        console.print(f"  [dim]• Filter by credibility: --credibility high[/dim]")
+
+        return 0
+
+    except FileNotFoundError:
+        log_error(f"Run not found: {run_id}")
+        return 1
+    except Exception as e:
+        log_error(f"Error inspecting evidence: {e}")
+        return 1
+
+
+def display_evidence_summary(state: State, console: Console) -> None:
+    """Display evidence summary statistics.
+
+    Args:
+        state: The state containing evidence
+        console: Rich console instance
+    """
+    # Count by type
+    by_type = {}
+    for e in state.evidence:
+        by_type[e.type] = by_type.get(e.type, 0) + 1
+
+    # Count by credibility
+    by_credibility = {}
+    for e in state.evidence:
+        by_credibility[e.credibility] = by_credibility.get(e.credibility, 0) + 1
+
+    # Count by query category
+    by_category = {}
+    for e in state.evidence:
+        for tag in e.tags:
+            by_category[tag] = by_category.get(tag, 0) + 1
+
+    # Summary table
+    summary_table = Table(title="Evidence Summary", show_header=True, header_style="bold cyan")
+    summary_table.add_column("Metric", style="white", width=20)
+    summary_table.add_column("Breakdown", style="yellow")
+
+    # Type breakdown
+    type_str = ", ".join(f"{t}: {c}" for t, c in sorted(by_type.items(), key=lambda x: -x[1]))
+    summary_table.add_row("By Type", type_str or "N/A")
+
+    # Credibility breakdown with colors
+    cred_parts = []
+    for tier in ["high", "medium", "low"]:
+        if tier in by_credibility:
+            color = {"high": "green", "medium": "yellow", "low": "dim"}[tier]
+            cred_parts.append(f"[{color}]{tier}: {by_credibility[tier]}[/{color}]")
+    summary_table.add_row("By Credibility", ", ".join(cred_parts) or "N/A")
+
+    # Category breakdown
+    cat_str = ", ".join(f"{c}: {n}" for c, n in sorted(by_category.items(), key=lambda x: -x[1]))
+    summary_table.add_row("By Category", cat_str or "N/A")
+
+    # Query count
+    queries_done = len([q for q in state.research_plan.queries if q.status == "done"])
+    summary_table.add_row("Queries Executed", f"{queries_done} of {len(state.research_plan.queries)}")
+
+    console.print(summary_table)
+    console.print()
+
+
+def display_evidence_table(evidence: list, console: Console) -> None:
+    """Display evidence in a table format.
+
+    Args:
+        evidence: List of evidence items
+        console: Rich console instance
+    """
+    table = Table(title="Evidence List", show_header=True, header_style="bold magenta")
+    table.add_column("ID", style="cyan", width=5, no_wrap=True)
+    table.add_column("Type", style="white", width=9)
+    table.add_column("Cred", width=8)
+    table.add_column("Title", style="white", no_wrap=False)
+    table.add_column("Tags", style="dim", width=12)
+
+    for e in evidence:
+        # Color code credibility
+        cred_color = {"high": "green", "medium": "yellow", "low": "dim"}[e.credibility]
+        cred_display = f"[{cred_color}]{e.credibility}[/{cred_color}]"
+
+        # Truncate title
+        title = e.title[:55] + "..." if len(e.title) > 58 else e.title
+
+        # Tags
+        tags = ", ".join(e.tags[:2]) if e.tags else ""
+
+        table.add_row(
+            e.id,
+            e.type,
+            cred_display,
+            title,
+            tags
+        )
+
+    console.print(table)
+
+
+def display_evidence_detail(state: State, evidence_id: str, console: Console) -> int:
+    """Display full details for a specific evidence item.
+
+    Args:
+        state: The state containing evidence
+        evidence_id: The evidence ID to display
+        console: Rich console instance
+
+    Returns:
+        Exit code (0 for success, 1 for error)
+    """
+    # Find the evidence
+    evidence = None
+    for e in state.evidence:
+        if e.id == evidence_id or e.id.lower() == evidence_id.lower():
+            evidence = e
+            break
+
+    if not evidence:
+        log_error(f"Evidence not found: {evidence_id}")
+        console.print(f"\n[dim]Available IDs: {', '.join(e.id for e in state.evidence[:20])}{'...' if len(state.evidence) > 20 else ''}[/dim]")
+        return 1
+
+    log_section(f"Evidence Detail: {evidence.id}", console)
+
+    # Basic info table
+    info_table = Table(show_header=False, box=None, padding=(0, 2))
+    info_table.add_column("Field", style="bold cyan", width=15)
+    info_table.add_column("Value", style="white")
+
+    info_table.add_row("ID", evidence.id)
+    info_table.add_row("Title", evidence.title)
+    info_table.add_row("URL", evidence.url)
+    info_table.add_row("Type", evidence.type)
+
+    cred_color = {"high": "green", "medium": "yellow", "low": "dim"}[evidence.credibility]
+    info_table.add_row("Credibility", f"[{cred_color}]{evidence.credibility}[/{cred_color}]")
+
+    info_table.add_row("Relevance", f"{evidence.relevance_score:.2f}")
+    info_table.add_row("Tags", ", ".join(evidence.tags) if evidence.tags else "None")
+    info_table.add_row("Query ID", evidence.query_id)
+
+    console.print(info_table)
+
+    # Find the query
+    query_text = "Unknown"
+    for q in state.research_plan.queries:
+        if q.id == evidence.query_id:
+            query_text = q.text
+            break
+
+    console.print(f"\n[bold]Source Query:[/bold] {query_text}")
+
+    # Snippet
+    console.print(f"\n[bold]Snippet:[/bold]")
+    console.print(f"[dim]{evidence.snippet}[/dim]")
+
+    # Full text preview
+    if evidence.full_text:
+        console.print(f"\n[bold]Content Preview:[/bold] ({len(evidence.full_text)} chars)")
+        preview = evidence.full_text[:1000]
+        if len(evidence.full_text) > 1000:
+            preview += "\n\n[dim]... (truncated)[/dim]"
+        console.print(f"{preview}")
+
+    console.print()
+    return 0
+
+
 def main() -> int:
     """Main entry point for the CLI.
 
@@ -369,6 +644,16 @@ def main() -> int:
     if args.list:
         display_runs_table(console)
         return 0
+
+    # Handle --inspect
+    if args.inspect:
+        return inspect_evidence(
+            args.inspect,
+            console,
+            type_filter=args.type,
+            credibility_filter=args.credibility,
+            evidence_id=args.evidence_id
+        )
 
     # Handle --resume
     if args.resume:
