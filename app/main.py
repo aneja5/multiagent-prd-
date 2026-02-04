@@ -10,6 +10,7 @@ from pathlib import Path
 
 from openai import OpenAI
 from rich.console import Console
+from rich.panel import Panel
 from rich.table import Table
 
 from app.config import ConfigurationError, get_config
@@ -52,6 +53,11 @@ Examples:
   python -m app.main --inspect <run_id> --type forum
   python -m app.main --inspect <run_id> --credibility high
   python -m app.main --inspect <run_id> --evidence-id E5
+
+  # Inspect analysis results
+  python -m app.main --inspect <run_id> --painpoints
+  python -m app.main --inspect <run_id> --competitors
+  python -m app.main --inspect <run_id> --gaps
         """
     )
 
@@ -100,6 +106,39 @@ Examples:
         type=str,
         metavar="ID",
         help="Show full details for specific evidence (use with --inspect)"
+    )
+
+    # Analysis inspection options
+    parser.add_argument(
+        "--painpoints",
+        action="store_true",
+        help="Show pain points analysis (use with --inspect)"
+    )
+
+    parser.add_argument(
+        "--painpoint-id",
+        type=str,
+        metavar="ID",
+        help="Show full details for specific pain point (use with --inspect --painpoints)"
+    )
+
+    parser.add_argument(
+        "--competitors",
+        action="store_true",
+        help="Show competitive analysis (use with --inspect)"
+    )
+
+    parser.add_argument(
+        "--competitor-id",
+        type=str,
+        metavar="ID",
+        help="Show full details for specific competitor (use with --inspect --competitors)"
+    )
+
+    parser.add_argument(
+        "--gaps",
+        action="store_true",
+        help="Show opportunity gaps and market insights (use with --inspect)"
     )
 
     parser.add_argument(
@@ -619,6 +658,542 @@ def display_evidence_detail(state: State, evidence_id: str, console: Console) ->
     return 0
 
 
+def inspect_painpoints(
+    run_id: str,
+    console: Console,
+    painpoint_id: str = None
+) -> int:
+    """Inspect pain points analysis from a run.
+
+    Args:
+        run_id: The run ID to inspect
+        console: Rich console instance for output
+        painpoint_id: Optional specific pain point ID to show details
+
+    Returns:
+        Exit code (0 for success, 1 for error)
+    """
+    try:
+        state = load_state(run_id)
+
+        if not state.insights.pain_points:
+            log_info(f"No pain points found for run {run_id[:8]}...")
+            log_info("Pain points are extracted after the research phase completes.")
+            return 0
+
+        # If specific pain point requested
+        if painpoint_id:
+            return display_painpoint_detail(state, painpoint_id, console)
+
+        # Display summary
+        log_section(f"Pain Points Analysis: {run_id[:8]}...", console)
+
+        console.print(f"[bold]Product Idea:[/bold] {state.metadata.raw_idea[:80]}...")
+        console.print(f"[bold]Target User:[/bold] {state.metadata.target_user}")
+        console.print(f"[bold]Domain:[/bold] {state.metadata.domain}")
+        console.print()
+
+        # Summary panel
+        severity_counts = {"critical": 0, "major": 0, "minor": 0}
+        for pp in state.insights.pain_points:
+            sev = pp.severity if hasattr(pp, 'severity') else pp.get('severity', 'major')
+            severity_counts[sev] = severity_counts.get(sev, 0) + 1
+
+        console.print(Panel.fit(
+            f"[bold]Total Pain Points:[/bold] {len(state.insights.pain_points)}\n"
+            f"[red]Critical:[/red] {severity_counts.get('critical', 0)}  "
+            f"[yellow]Major:[/yellow] {severity_counts.get('major', 0)}  "
+            f"[dim]Minor:[/dim] {severity_counts.get('minor', 0)}",
+            title="Pain Points Summary",
+            border_style="cyan"
+        ))
+        console.print()
+
+        # Pain points table
+        table = Table(title="Pain Point Clusters", show_header=True, header_style="bold magenta")
+        table.add_column("ID", style="cyan", width=5)
+        table.add_column("Cluster", style="white", width=28)
+        table.add_column("Sev", width=8)
+        table.add_column("Who", style="dim", width=35)
+        table.add_column("Evidence", style="dim", width=10)
+
+        for pp in state.insights.pain_points:
+            # Handle both Pydantic model and dict
+            if hasattr(pp, 'id'):
+                pp_id = pp.id or "N/A"
+                cluster = pp.cluster_name or pp.description[:25]
+                severity = pp.severity
+                who = pp.who or "N/A"
+                evidence_ids = pp.evidence_ids or []
+            else:
+                pp_id = pp.get('id', 'N/A')
+                cluster = pp.get('cluster_name', pp.get('description', '')[:25])
+                severity = pp.get('severity', 'major')
+                who = pp.get('who', 'N/A')
+                evidence_ids = pp.get('evidence_ids', [])
+
+            sev_color = {"critical": "red", "major": "yellow", "minor": "dim"}.get(severity, "white")
+            cluster_display = cluster[:25] + "..." if len(cluster) > 28 else cluster
+            who_display = who[:32] + "..." if len(who) > 35 else who
+
+            table.add_row(
+                pp_id,
+                cluster_display,
+                f"[{sev_color}]{severity}[/{sev_color}]",
+                who_display,
+                f"{len(evidence_ids)} sources"
+            )
+
+        console.print(table)
+
+        # Usage hints
+        console.print("\n[dim]Tips:[/dim]")
+        console.print(f"  [dim]• View details: --painpoint-id PP1[/dim]")
+        console.print(f"  [dim]• View competitors: --competitors[/dim]")
+        console.print(f"  [dim]• View gaps: --gaps[/dim]")
+
+        return 0
+
+    except FileNotFoundError:
+        log_error(f"Run not found: {run_id}")
+        return 1
+    except Exception as e:
+        log_error(f"Error inspecting pain points: {e}")
+        return 1
+
+
+def display_painpoint_detail(state: State, painpoint_id: str, console: Console) -> int:
+    """Display full details for a specific pain point.
+
+    Args:
+        state: The state containing pain points
+        painpoint_id: The pain point ID to display
+        console: Rich console instance
+
+    Returns:
+        Exit code (0 for success, 1 for error)
+    """
+    # Find the pain point
+    painpoint = None
+    for pp in state.insights.pain_points:
+        pp_id = pp.id if hasattr(pp, 'id') else pp.get('id', '')
+        if pp_id == painpoint_id or pp_id.lower() == painpoint_id.lower():
+            painpoint = pp
+            break
+
+    if not painpoint:
+        log_error(f"Pain point not found: {painpoint_id}")
+        available = [pp.id if hasattr(pp, 'id') else pp.get('id', '') for pp in state.insights.pain_points]
+        console.print(f"\n[dim]Available IDs: {', '.join(available)}[/dim]")
+        return 1
+
+    # Extract fields (handle both Pydantic and dict)
+    if hasattr(painpoint, 'cluster_name'):
+        cluster_name = painpoint.cluster_name
+        who = painpoint.who
+        what = painpoint.what
+        why = painpoint.why
+        severity = painpoint.severity
+        frequency = painpoint.frequency
+        quotes = painpoint.example_quotes or []
+        evidence_ids = painpoint.evidence_ids or []
+    else:
+        cluster_name = painpoint.get('cluster_name', 'N/A')
+        who = painpoint.get('who', 'N/A')
+        what = painpoint.get('what', 'N/A')
+        why = painpoint.get('why', 'N/A')
+        severity = painpoint.get('severity', 'N/A')
+        frequency = painpoint.get('frequency', 'N/A')
+        quotes = painpoint.get('example_quotes', [])
+        evidence_ids = painpoint.get('evidence_ids', [])
+
+    log_section(f"Pain Point Detail: {painpoint_id}", console)
+
+    # Info panel
+    sev_color = {"critical": "red", "major": "yellow", "minor": "dim"}.get(severity, "white")
+
+    console.print(Panel.fit(
+        f"[bold cyan]Cluster:[/bold cyan] {cluster_name}\n"
+        f"[bold]Severity:[/bold] [{sev_color}]{severity}[/{sev_color}]  "
+        f"[bold]Frequency:[/bold] {frequency}",
+        border_style="cyan"
+    ))
+    console.print()
+
+    # Detail table
+    detail_table = Table(show_header=False, box=None, padding=(0, 2))
+    detail_table.add_column("Field", style="bold cyan", width=12)
+    detail_table.add_column("Value", style="white")
+
+    detail_table.add_row("Who", who or "N/A")
+    detail_table.add_row("What", what or "N/A")
+    detail_table.add_row("Why", why or "N/A")
+    detail_table.add_row("Evidence", ", ".join(evidence_ids) if evidence_ids else "None")
+
+    console.print(detail_table)
+
+    # Example quotes
+    if quotes:
+        console.print("\n[bold cyan]Example Quotes:[/bold cyan]")
+        for i, quote in enumerate(quotes, 1):
+            console.print(f"  {i}. [italic]\"{quote}\"[/italic]")
+
+    # Show linked evidence
+    if evidence_ids:
+        console.print("\n[bold cyan]Linked Evidence:[/bold cyan]")
+        for eid in evidence_ids:
+            for e in state.evidence:
+                e_id = e.id if hasattr(e, 'id') else e.get('id', '')
+                if e_id == eid:
+                    title = e.title if hasattr(e, 'title') else e.get('title', '')
+                    e_type = e.type if hasattr(e, 'type') else e.get('type', '')
+                    console.print(f"  [{eid}] {title[:60]}{'...' if len(title) > 60 else ''} ({e_type})")
+                    break
+
+    console.print()
+    return 0
+
+
+def inspect_competitors(
+    run_id: str,
+    console: Console,
+    competitor_id: str = None
+) -> int:
+    """Inspect competitive analysis from a run.
+
+    Args:
+        run_id: The run ID to inspect
+        console: Rich console instance for output
+        competitor_id: Optional specific competitor ID to show details
+
+    Returns:
+        Exit code (0 for success, 1 for error)
+    """
+    try:
+        state = load_state(run_id)
+
+        if not state.insights.competitors:
+            log_info(f"No competitors found for run {run_id[:8]}...")
+            log_info("Competitor analysis runs after the research phase completes.")
+            return 0
+
+        # If specific competitor requested
+        if competitor_id:
+            return display_competitor_detail(state, competitor_id, console)
+
+        # Display summary
+        log_section(f"Competitive Analysis: {run_id[:8]}...", console)
+
+        console.print(f"[bold]Product Idea:[/bold] {state.metadata.raw_idea[:80]}...")
+        console.print(f"[bold]Domain:[/bold] {state.metadata.domain}")
+        console.print()
+
+        # Summary panel
+        console.print(Panel.fit(
+            f"[bold]Competitors Analyzed:[/bold] {len(state.insights.competitors)}\n"
+            f"[bold]Opportunity Gaps:[/bold] {len(state.insights.opportunity_gaps)}",
+            title="Competitive Landscape Summary",
+            border_style="cyan"
+        ))
+        console.print()
+
+        # Competitors table
+        table = Table(title="Competitors", show_header=True, header_style="bold magenta")
+        table.add_column("ID", style="cyan", width=4)
+        table.add_column("Name", style="white", width=18)
+        table.add_column("Positioning", style="dim", width=40)
+        table.add_column("Pricing", style="yellow", width=15)
+        table.add_column("Features", style="dim", width=8)
+
+        for comp in state.insights.competitors:
+            # Handle both Pydantic model and dict
+            if hasattr(comp, 'id'):
+                comp_id = comp.id or "N/A"
+                name = comp.name
+                positioning = comp.positioning or comp.description or "N/A"
+                pricing = comp.pricing_model or comp.pricing or "N/A"
+                features = comp.key_features or []
+            else:
+                comp_id = comp.get('id', 'N/A')
+                name = comp.get('name', 'Unknown')
+                positioning = comp.get('positioning', comp.get('description', 'N/A'))
+                pricing = comp.get('pricing_model', comp.get('pricing', 'N/A'))
+                features = comp.get('key_features', [])
+
+            pos_display = positioning[:37] + "..." if len(positioning) > 40 else positioning
+            pricing_display = pricing[:12] + "..." if len(str(pricing)) > 15 else str(pricing)
+
+            table.add_row(
+                comp_id,
+                name[:15] + "..." if len(name) > 18 else name,
+                pos_display,
+                pricing_display,
+                str(len(features))
+            )
+
+        console.print(table)
+
+        # Quick strengths/weaknesses summary
+        console.print("\n[bold cyan]Quick Comparison:[/bold cyan]")
+        for comp in state.insights.competitors[:5]:
+            if hasattr(comp, 'name'):
+                name = comp.name
+                strengths = comp.strengths or []
+                weaknesses = comp.weaknesses or []
+            else:
+                name = comp.get('name', 'Unknown')
+                strengths = comp.get('strengths', [])
+                weaknesses = comp.get('weaknesses', [])
+
+            console.print(f"\n  [bold]{name}[/bold]")
+            if strengths:
+                console.print(f"    [green]+[/green] {strengths[0][:60]}")
+            if weaknesses:
+                console.print(f"    [red]-[/red] {weaknesses[0][:60]}")
+
+        # Usage hints
+        console.print("\n[dim]Tips:[/dim]")
+        console.print(f"  [dim]• View details: --competitor-id C1[/dim]")
+        console.print(f"  [dim]• View gaps: --gaps[/dim]")
+        console.print(f"  [dim]• View pain points: --painpoints[/dim]")
+
+        return 0
+
+    except FileNotFoundError:
+        log_error(f"Run not found: {run_id}")
+        return 1
+    except Exception as e:
+        log_error(f"Error inspecting competitors: {e}")
+        return 1
+
+
+def display_competitor_detail(state: State, competitor_id: str, console: Console) -> int:
+    """Display full details for a specific competitor.
+
+    Args:
+        state: The state containing competitors
+        competitor_id: The competitor ID to display
+        console: Rich console instance
+
+    Returns:
+        Exit code (0 for success, 1 for error)
+    """
+    # Find the competitor
+    competitor = None
+    for comp in state.insights.competitors:
+        comp_id = comp.id if hasattr(comp, 'id') else comp.get('id', '')
+        if comp_id == competitor_id or comp_id.lower() == competitor_id.lower():
+            competitor = comp
+            break
+
+    if not competitor:
+        log_error(f"Competitor not found: {competitor_id}")
+        available = [c.id if hasattr(c, 'id') else c.get('id', '') for c in state.insights.competitors]
+        console.print(f"\n[dim]Available IDs: {', '.join(available)}[/dim]")
+        return 1
+
+    # Extract fields (handle both Pydantic and dict)
+    if hasattr(competitor, 'name'):
+        name = competitor.name
+        url = competitor.url
+        positioning = competitor.positioning or competitor.description
+        icp = competitor.icp
+        pricing_model = competitor.pricing_model
+        pricing_details = competitor.pricing_details or competitor.pricing
+        features = competitor.key_features or []
+        strengths = competitor.strengths or []
+        weaknesses = competitor.weaknesses or []
+        evidence_ids = competitor.evidence_ids or []
+    else:
+        name = competitor.get('name', 'Unknown')
+        url = competitor.get('url')
+        positioning = competitor.get('positioning', competitor.get('description', 'N/A'))
+        icp = competitor.get('icp', 'N/A')
+        pricing_model = competitor.get('pricing_model', 'N/A')
+        pricing_details = competitor.get('pricing_details', competitor.get('pricing', 'N/A'))
+        features = competitor.get('key_features', [])
+        strengths = competitor.get('strengths', [])
+        weaknesses = competitor.get('weaknesses', [])
+        evidence_ids = competitor.get('evidence_ids', [])
+
+    log_section(f"Competitor Detail: {name}", console)
+
+    # Header panel
+    console.print(Panel.fit(
+        f"[bold cyan]{name}[/bold cyan]\n"
+        f"[dim]{url or 'No URL available'}[/dim]",
+        border_style="cyan"
+    ))
+    console.print()
+
+    # Basic info
+    info_table = Table(show_header=False, box=None, padding=(0, 2))
+    info_table.add_column("Field", style="bold cyan", width=15)
+    info_table.add_column("Value", style="white")
+
+    info_table.add_row("Positioning", positioning or "N/A")
+    info_table.add_row("Target Customer", icp or "N/A")
+    info_table.add_row("Pricing Model", pricing_model or "N/A")
+    info_table.add_row("Pricing Details", pricing_details or "N/A")
+    info_table.add_row("Evidence", ", ".join(evidence_ids) if evidence_ids else "None")
+
+    console.print(info_table)
+
+    # Key Features
+    if features:
+        console.print("\n[bold cyan]Key Features:[/bold cyan]")
+        for i, feature in enumerate(features, 1):
+            console.print(f"  {i}. {feature}")
+
+    # Strengths and Weaknesses side by side
+    console.print()
+    sw_table = Table(show_header=True, header_style="bold", box=None)
+    sw_table.add_column("[green]Strengths[/green]", style="green", width=40)
+    sw_table.add_column("[red]Weaknesses[/red]", style="red", width=40)
+
+    max_items = max(len(strengths), len(weaknesses))
+    for i in range(max_items):
+        s = strengths[i] if i < len(strengths) else ""
+        w = weaknesses[i] if i < len(weaknesses) else ""
+        sw_table.add_row(f"+ {s}" if s else "", f"- {w}" if w else "")
+
+    console.print(sw_table)
+
+    # Show linked evidence
+    if evidence_ids:
+        console.print("\n[bold cyan]Linked Evidence:[/bold cyan]")
+        for eid in evidence_ids[:5]:
+            for e in state.evidence:
+                e_id = e.id if hasattr(e, 'id') else e.get('id', '')
+                if e_id == eid:
+                    title = e.title if hasattr(e, 'title') else e.get('title', '')
+                    e_type = e.type if hasattr(e, 'type') else e.get('type', '')
+                    console.print(f"  [{eid}] {title[:55]}{'...' if len(title) > 55 else ''} ({e_type})")
+                    break
+        if len(evidence_ids) > 5:
+            console.print(f"  [dim]... and {len(evidence_ids) - 5} more[/dim]")
+
+    console.print()
+    return 0
+
+
+def inspect_gaps(run_id: str, console: Console) -> int:
+    """Inspect opportunity gaps and market insights from a run.
+
+    Args:
+        run_id: The run ID to inspect
+        console: Rich console instance for output
+
+    Returns:
+        Exit code (0 for success, 1 for error)
+    """
+    try:
+        state = load_state(run_id)
+
+        log_section(f"Opportunity Analysis: {run_id[:8]}...", console)
+
+        console.print(f"[bold]Product Idea:[/bold] {state.metadata.raw_idea[:80]}...")
+        console.print(f"[bold]Domain:[/bold] {state.metadata.domain}")
+        console.print()
+
+        # Check if we have gaps
+        if not state.insights.opportunity_gaps and not state.insights.market_insights:
+            log_info("No opportunity gaps or market insights found.")
+            log_info("This analysis runs after the competitor analysis completes.")
+            return 0
+
+        # Summary panel
+        console.print(Panel.fit(
+            f"[bold]Opportunity Gaps:[/bold] {len(state.insights.opportunity_gaps)}\n"
+            f"[bold]Competitors Analyzed:[/bold] {len(state.insights.competitors)}\n"
+            f"[bold]Pain Points Identified:[/bold] {len(state.insights.pain_points)}",
+            title="Analysis Summary",
+            border_style="green"
+        ))
+        console.print()
+
+        # Opportunity Gaps
+        if state.insights.opportunity_gaps:
+            console.print("[bold cyan]Opportunity Gaps:[/bold cyan]")
+            console.print("[dim]What competitors collectively miss or do poorly:[/dim]\n")
+
+            for i, gap in enumerate(state.insights.opportunity_gaps, 1):
+                console.print(f"  [bold green]{i}.[/bold green] {gap}")
+
+            console.print()
+
+        # Market Insights
+        if state.insights.market_insights:
+            console.print(Panel(
+                state.insights.market_insights,
+                title="[bold]Market Insights[/bold]",
+                border_style="blue",
+                padding=(1, 2)
+            ))
+            console.print()
+
+        # Cross-reference with pain points
+        if state.insights.pain_points:
+            console.print("[bold cyan]Related Pain Points:[/bold cyan]")
+            console.print("[dim]User pain points that align with opportunity gaps:[/dim]\n")
+
+            # Show top 5 high-severity pain points
+            high_severity = []
+            for pp in state.insights.pain_points:
+                sev = pp.severity if hasattr(pp, 'severity') else pp.get('severity', '')
+                if sev in ['critical', 'high']:
+                    high_severity.append(pp)
+
+            for pp in high_severity[:5]:
+                if hasattr(pp, 'cluster_name'):
+                    cluster = pp.cluster_name
+                    what = pp.what
+                else:
+                    cluster = pp.get('cluster_name', pp.get('description', ''))
+                    what = pp.get('what', '')
+
+                console.print(f"  [red]•[/red] [bold]{cluster}[/bold]")
+                if what:
+                    console.print(f"    [dim]{what[:80]}{'...' if len(what) > 80 else ''}[/dim]")
+
+        # Cross-reference with competitor weaknesses
+        if state.insights.competitors:
+            console.print("\n[bold cyan]Common Competitor Weaknesses:[/bold cyan]")
+            console.print("[dim]Weaknesses mentioned across multiple competitors:[/dim]\n")
+
+            # Collect all weaknesses
+            all_weaknesses = []
+            for comp in state.insights.competitors:
+                weaknesses = comp.weaknesses if hasattr(comp, 'weaknesses') else comp.get('weaknesses', [])
+                name = comp.name if hasattr(comp, 'name') else comp.get('name', '')
+                for w in weaknesses:
+                    all_weaknesses.append((name, w))
+
+            # Show unique weaknesses
+            shown = set()
+            for name, weakness in all_weaknesses[:8]:
+                w_lower = weakness.lower()[:30]
+                if w_lower not in shown:
+                    shown.add(w_lower)
+                    console.print(f"  [yellow]•[/yellow] {weakness[:70]}{'...' if len(weakness) > 70 else ''}")
+                    console.print(f"    [dim]({name})[/dim]")
+
+        # Usage hints
+        console.print("\n[dim]Tips:[/dim]")
+        console.print(f"  [dim]• View pain points: --painpoints[/dim]")
+        console.print(f"  [dim]• View competitors: --competitors[/dim]")
+        console.print(f"  [dim]• View evidence: (no flag, just --inspect)[/dim]")
+
+        return 0
+
+    except FileNotFoundError:
+        log_error(f"Run not found: {run_id}")
+        return 1
+    except Exception as e:
+        log_error(f"Error inspecting gaps: {e}")
+        return 1
+
+
 def main() -> int:
     """Main entry point for the CLI.
 
@@ -645,8 +1220,29 @@ def main() -> int:
         display_runs_table(console)
         return 0
 
-    # Handle --inspect
+    # Handle --inspect with various sub-options
     if args.inspect:
+        # Pain points inspection
+        if args.painpoints:
+            return inspect_painpoints(
+                args.inspect,
+                console,
+                painpoint_id=args.painpoint_id
+            )
+
+        # Competitors inspection
+        if args.competitors:
+            return inspect_competitors(
+                args.inspect,
+                console,
+                competitor_id=args.competitor_id
+            )
+
+        # Opportunity gaps inspection
+        if args.gaps:
+            return inspect_gaps(args.inspect, console)
+
+        # Default: evidence inspection
         return inspect_evidence(
             args.inspect,
             console,

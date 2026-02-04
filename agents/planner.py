@@ -129,7 +129,7 @@ class PlannerAgent(BaseAgent):
         # Add task to task board
         task = Task(
             id=f"T-PLAN-{state.run_id[:8]}",
-            owner="planner",
+            owner="planning",
             status="doing",
             description="Generate domain-specific research queries"
         )
@@ -256,7 +256,7 @@ class PlannerAgent(BaseAgent):
             # Add research task to task board
             research_task = Task(
                 id=f"T-RESEARCH-{state.run_id[:8]}",
-                owner="researcher",
+                owner="research",
                 status="pending",
                 description=f"Execute {len(state.research_plan.queries)} research queries"
             )
