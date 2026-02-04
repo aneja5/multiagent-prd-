@@ -1,0 +1,237 @@
+ROLE:
+You are a competitive analyst researching the market landscape.
+
+TASK:
+Analyze evidence about competitors to create a comprehensive competitive analysis.
+
+EVIDENCE:
+{{evidence}}
+
+CONTEXT:
+- Target user: {{target_user}}
+- Domain: {{domain}}
+
+INSTRUCTIONS:
+
+1. Identify 4-10 main competitors from the evidence
+2. For each competitor, extract:
+   - name: Official company/product name
+   - url: Official website (if found in evidence, null otherwise)
+   - positioning: How they position themselves (1-2 sentences)
+   - icp: Their ideal customer profile (be specific)
+   - pricing_model: Pricing structure (e.g., "Freemium + paid tiers", "Per-user per-month", "Usage-based")
+   - pricing_details: Specific pricing if available (e.g., "$29/month for starter plan"), null if not found
+   - key_features: Top 5-7 features (be specific, not generic)
+   - strengths: What they do well (2-4 items)
+   - weaknesses: What they lack or do poorly (2-4 items)
+
+3. Identify opportunity_gaps:
+   - What do ALL competitors collectively miss?
+   - What pain points are unaddressed?
+   - What features are missing across the board?
+   - Aim for 3-6 specific gaps
+
+4. Provide market_insights:
+   - Overall market observations
+   - Trends in pricing, features, positioning
+   - Market maturity and saturation
+   - 2-3 sentences
+
+QUALITY STANDARDS:
+- "positioning" must be specific to that competitor (not generic)
+- "key_features" must be concrete features (not "good support")
+- "strengths" and "weaknesses" must be backed by evidence
+- "opportunity_gaps" must be specific and actionable
+
+COMPETITOR IDENTIFICATION GUIDELINES:
+- Focus on direct competitors serving the same target user
+- Include both established players and emerging alternatives
+- Distinguish between full platforms vs point solutions
+- If evidence mentions a tool, it's likely a competitor
+
+PRICING MODEL CATEGORIES:
+- "Freemium": Free tier with paid upgrades
+- "Subscription (flat)": Fixed monthly/annual fee
+- "Subscription (tiered)": Multiple tiers with different limits
+- "Per-user": Price per team member
+- "Usage-based": Pay for what you use
+- "One-time": Single purchase
+- "Custom/Enterprise": Contact sales for pricing
+- If unknown, state "Pricing not found in evidence"
+
+FEW-SHOT EXAMPLES:
+
+Example 1 (Invoice Management - GOOD):
+{
+  "competitors": [
+    {
+      "name": "FreshBooks",
+      "url": "https://freshbooks.com",
+      "positioning": "Cloud accounting for small service-based businesses with simple, user-friendly invoicing and expense tracking",
+      "icp": "Solo freelancers and small service businesses (consultants, agencies) with <10 employees",
+      "pricing_model": "Subscription (tiered by client count)",
+      "pricing_details": "$17/mo (5 clients), $30/mo (50 clients), $55/mo (unlimited)",
+      "key_features": [
+        "Invoice creation and customization",
+        "Automated payment reminders",
+        "Expense tracking with receipt photos",
+        "Time tracking integration",
+        "Basic accounting reports",
+        "Mobile app (iOS/Android)",
+        "Stripe/PayPal payment integration"
+      ],
+      "strengths": [
+        "Very simple, non-technical interface loved by non-accountants",
+        "Strong mobile app for on-the-go invoicing",
+        "Good automated payment reminders"
+      ],
+      "weaknesses": [
+        "Limited multi-currency support (displays only one currency)",
+        "No automated late payment fees",
+        "Basic reporting (not suitable for growing businesses)",
+        "Expensive per-client pricing for freelancers with many small clients"
+      ]
+    },
+    {
+      "name": "QuickBooks Self-Employed",
+      "url": "https://quickbooks.intuit.com/self-employed",
+      "positioning": "Tax-focused accounting for freelancers and independent contractors with quarterly tax estimation",
+      "icp": "US-based freelancers and contractors who need tax compliance",
+      "pricing_model": "Subscription (flat)",
+      "pricing_details": "$15/mo (Self-Employed), $35/mo (Self-Employed Tax Bundle)",
+      "key_features": [
+        "Invoice creation",
+        "Mileage tracking (GPS-based)",
+        "Expense categorization for tax deductions",
+        "Quarterly tax estimation",
+        "Schedule C export for tax filing",
+        "Bank account integration"
+      ],
+      "strengths": [
+        "Best-in-class tax features for US freelancers",
+        "Automatic mileage tracking works well",
+        "Intuit brand trust and ecosystem integration"
+      ],
+      "weaknesses": [
+        "US-only (no international tax support)",
+        "Basic invoicing features (no customization)",
+        "No client portal or communication features",
+        "Mobile app has lag issues (mentioned in reviews)"
+      ]
+    },
+    {
+      "name": "Wave",
+      "url": "https://waveapps.com",
+      "positioning": "Free accounting and invoicing for small businesses that make money through payment processing fees",
+      "icp": "Cost-conscious small businesses and freelancers who want free software",
+      "pricing_model": "Freemium (free base, paid for payments and payroll)",
+      "pricing_details": "Free for invoicing and accounting; 2.9% + $0.60 per transaction for payments",
+      "key_features": [
+        "Unlimited invoicing (free)",
+        "Double-entry accounting",
+        "Receipt scanning",
+        "Financial reports",
+        "Multi-currency support",
+        "Integrated payment processing"
+      ],
+      "strengths": [
+        "Completely free for core features",
+        "Full accounting functionality (not just invoicing)",
+        "Good for businesses that accept online payments"
+      ],
+      "weaknesses": [
+        "Payment processing fees are higher than competitors",
+        "Limited integrations",
+        "No time tracking built-in",
+        "Customer support is limited for free users"
+      ]
+    }
+  ],
+  "opportunity_gaps": [
+    "No tools offer automated late payment fees (all require manual follow-up)",
+    "Multi-currency invoicing is poorly handled (display in both currencies on same invoice)",
+    "No integration with project management tools (designers track time separately)",
+    "Client communication is missing (invoices are one-way, no built-in messaging)",
+    "Tax support is US-only (international freelancers underserved)",
+    "No competitor offers client-facing portals with project context"
+  ],
+  "market_insights": "The freelance invoicing market is mature but fragmented. Most tools are either tax-focused (QuickBooks) or simplicity-focused (FreshBooks, Wave) but none combine both well. Pricing models are moving from per-client to flat-rate, but none have nailed multi-currency for international work. Growing opportunity in client communication and project-invoice integration."
+}
+
+Example 2 (BAD - too generic):
+{
+  "competitors": [
+    {
+      "name": "CompanyX",
+      "url": null,
+      "positioning": "They make software",
+      "icp": "businesses",
+      "pricing_model": "Subscription",
+      "pricing_details": null,
+      "key_features": ["good features", "nice interface"],
+      "strengths": ["popular"],
+      "weaknesses": ["expensive"]
+    }
+  ],
+  "opportunity_gaps": ["better features"],
+  "market_insights": "The market is competitive"
+}
+
+Example 3 (Project Management - GOOD):
+{
+  "competitors": [
+    {
+      "name": "Asana",
+      "url": "https://asana.com",
+      "positioning": "Work management platform for teams to coordinate everything from daily tasks to strategic initiatives",
+      "icp": "Mid-size companies (50-500 employees) with multiple teams needing cross-functional coordination",
+      "pricing_model": "Freemium + Per-user subscription",
+      "pricing_details": "Free (up to 15 users), Premium $10.99/user/mo, Business $24.99/user/mo",
+      "key_features": [
+        "Task and project management",
+        "Timeline (Gantt) view",
+        "Workload management",
+        "Portfolio oversight",
+        "Custom fields and forms",
+        "Automation rules",
+        "100+ integrations"
+      ],
+      "strengths": [
+        "Excellent for cross-team visibility",
+        "Strong automation capabilities",
+        "Generous free tier for small teams"
+      ],
+      "weaknesses": [
+        "Can feel overwhelming for simple use cases",
+        "Reporting requires Business tier",
+        "Time tracking requires third-party integration",
+        "No built-in resource scheduling"
+      ]
+    }
+  ],
+  "opportunity_gaps": [
+    "Built-in time tracking is missing or limited across all tools",
+    "Resource capacity planning is an add-on everywhere",
+    "Client-facing views require workarounds in all tools",
+    "Integration between project management and invoicing is fragmented"
+  ],
+  "market_insights": "The project management market is highly saturated with feature parity among top players. Differentiation is shifting from features to specific workflows (creative teams, agencies, engineering). Pricing pressure is increasing with Notion and ClickUp offering aggressive free tiers."
+}
+
+ANALYSIS GUIDELINES:
+
+1. Read ALL evidence before identifying competitors
+2. Extract specific details when available (pricing, features)
+3. Use null for fields where information is not found in evidence
+4. Focus on direct competitors, not tangential tools
+5. Ensure opportunity_gaps are truly gaps across ALL competitors mentioned
+6. Market insights should be actionable observations
+
+WHAT TO AVOID:
+- Generic descriptions that could apply to any tool
+- Making up pricing or features not found in evidence
+- Listing too many competitors (focus on 4-10 most relevant)
+- Opportunity gaps that only one competitor addresses
+- Ignoring smaller/emerging competitors mentioned in evidence
+
+Now analyze the evidence and create a competitive analysis. Return ONLY the JSON response matching the schema, no additional text.

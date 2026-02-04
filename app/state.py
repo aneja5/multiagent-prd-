@@ -46,23 +46,49 @@ class Evidence(BaseModel):
 
 
 class PainPoint(BaseModel):
-    """A user pain point identified from research."""
+    """A user pain point identified from research.
 
+    Supports both simple and detailed pain point representations.
+    The detailed fields (cluster_name, who, what, why, example_quotes)
+    are used by the PainPointsAgent for richer analysis.
+    """
+
+    id: Optional[str] = None
     description: str
     severity: Literal["critical", "major", "minor"]
     evidence_ids: List[str] = Field(default_factory=list)
     frequency: Optional[str] = None
 
+    # Extended fields for detailed pain point analysis
+    cluster_name: Optional[str] = None
+    who: Optional[str] = None  # Which user segment
+    what: Optional[str] = None  # The pain point details
+    why: Optional[str] = None  # Root cause
+    example_quotes: List[str] = Field(default_factory=list)
+
 
 class Competitor(BaseModel):
-    """Information about a competitor product."""
+    """Information about a competitor product.
 
+    Supports both simple and detailed competitor representations.
+    The detailed fields are used by the CompetitorsAgent for richer analysis.
+    """
+
+    id: Optional[str] = None
     name: str
-    description: str
+    description: str = ""
     strengths: List[str] = Field(default_factory=list)
     weaknesses: List[str] = Field(default_factory=list)
     pricing: Optional[str] = None
     evidence_ids: List[str] = Field(default_factory=list)
+
+    # Extended fields for detailed competitive analysis
+    url: Optional[str] = None
+    positioning: Optional[str] = None  # How they position themselves
+    icp: Optional[str] = None  # Ideal customer profile
+    pricing_model: Optional[str] = None  # Pricing structure
+    pricing_details: Optional[str] = None  # Specific pricing info
+    key_features: List[str] = Field(default_factory=list)
 
 
 class Workflow(BaseModel):
@@ -80,6 +106,10 @@ class Insights(BaseModel):
     pain_points: List[PainPoint] = Field(default_factory=list)
     competitors: List[Competitor] = Field(default_factory=list)
     workflows: List[Workflow] = Field(default_factory=list)
+
+    # Competitive analysis insights
+    opportunity_gaps: List[str] = Field(default_factory=list)
+    market_insights: str = ""
 
 
 class PRD(BaseModel):

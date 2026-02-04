@@ -13,6 +13,8 @@ from rich.progress import Progress, SpinnerColumn, TextColumn
 
 from agents.base_agent import BaseAgent
 from agents.clarification import ClarificationAgent
+from agents.competitors import CompetitorsAgent
+from agents.painpoints import PainPointsAgent
 from agents.planner import PlannerAgent
 from agents.researcher import ResearcherAgent
 from app.config import get_config
@@ -36,9 +38,9 @@ AGENT_REGISTRY: Dict[str, Type[BaseAgent]] = {
     "clarification": ClarificationAgent,
     "planning": PlannerAgent,
     "research": ResearcherAgent,
+    "painpoints": PainPointsAgent,
+    "competitors": CompetitorsAgent,
     # More agents coming in future days:
-    # "painpoints": PainPointsAgent,
-    # "competitors": CompetitorAgent,
     # "prd_draft": PRDDraftAgent,
     # "validation": ValidationAgent,
 }

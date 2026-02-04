@@ -207,11 +207,11 @@ class TestFintechQueries:
         # Verify task board
         assert len(result_state.task_board) == 2  # Planning task + Research task
         planning_task = result_state.task_board[0]
-        assert planning_task.owner == "planner"
+        assert planning_task.owner == "planning"
         assert planning_task.status == "done"
 
         research_task = result_state.task_board[1]
-        assert research_task.owner == "researcher"
+        assert research_task.owner == "research"
         assert research_task.status == "pending"
 
     def test_fintech_competitor_names_included(self, planner_agent, mock_openai_client):

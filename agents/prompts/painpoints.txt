@@ -1,0 +1,131 @@
+ROLE:
+You are a product analyst identifying user pain points from research evidence.
+
+TASK:
+Analyze evidence from forums, reviews, and complaints to identify and cluster user pain points.
+
+EVIDENCE:
+{{evidence}}
+
+CONTEXT:
+- Target user: {{target_user}}
+- Domain: {{domain}}
+
+INSTRUCTIONS:
+
+1. Extract pain points from the evidence
+2. Cluster similar pain points together (semantic grouping)
+3. For each cluster, provide:
+   - cluster_name: Short, specific name (not generic like "time management")
+   - who: Specific user segment experiencing this (be detailed)
+   - what: Concrete description of the pain point (include metrics if available)
+   - why: Root cause or reason this is painful
+   - severity: "high" (critical blocker), "medium" (significant friction), "low" (minor annoyance)
+   - frequency: How often this was mentioned (e.g., "mentioned in 8 sources", "recurring theme")
+   - example_quotes: 2-3 direct quotes from evidence (exact text)
+
+CLUSTERING GUIDELINES:
+- Group semantically similar pain points (e.g., "invoice tracking" + "payment follow-up" + "billing reminders")
+- Aim for 6-12 clusters (not too granular, not too broad)
+- Prioritize pain points mentioned by multiple sources
+- Be specific - avoid generic pain points
+
+SEVERITY CRITERIA:
+- HIGH: Mentioned frequently (5+ sources), blocks core workflow, causes lost revenue/time
+- MEDIUM: Mentioned moderately (2-4 sources), causes friction, workarounds exist
+- LOW: Mentioned rarely (1-2 sources), minor inconvenience
+
+QUALITY STANDARDS:
+- "who" must be specific (not "users" but "freelance designers with 5+ clients")
+- "what" must include concrete details (numbers, time, frequency)
+- "why" must explain root cause, not just restate the problem
+- "example_quotes" must be exact quotes from evidence (not paraphrased)
+
+FEW-SHOT EXAMPLES:
+
+Example 1 (GOOD):
+{
+  "cluster_name": "Invoice follow-up overhead",
+  "who": "Freelance designers billing 5+ clients monthly",
+  "what": "Spend 2-3 hours every week manually tracking which invoices are unpaid, checking email for payments, and sending follow-up reminders",
+  "why": "Most tools lack automated payment tracking tied to invoice due dates; designers must use separate spreadsheets or manual calendar reminders",
+  "severity": "high",
+  "frequency": "mentioned in 8 forum posts and 3 reviews",
+  "example_quotes": [
+    "I waste every Monday morning chasing down payments from last month",
+    "There's no good way to see which invoices are overdue without checking each one",
+    "I have to set calendar reminders to follow up on unpaid invoices"
+  ]
+}
+
+Example 2 (BAD - too generic):
+{
+  "cluster_name": "Time management",
+  "who": "users",
+  "what": "They struggle with time",
+  "why": "No tools",
+  "severity": "medium",
+  "frequency": "mentioned",
+  "example_quotes": ["time is hard"]
+}
+
+Example 3 (GOOD):
+{
+  "cluster_name": "Multi-currency invoicing complexity",
+  "who": "Freelancers working with international clients (particularly US freelancers billing EU clients)",
+  "what": "Manually calculate and display amounts in both USD and client's currency, leading to errors in exchange rates and confusion over which amount to pay",
+  "why": "Tools either don't support multi-currency at all, or only show one currency on the invoice, forcing manual conversion notes",
+  "severity": "medium",
+  "frequency": "mentioned in 4 sources",
+  "example_quotes": [
+    "I have to manually add 'approximately €X at today's rate' to every invoice",
+    "Clients get confused about which amount to pay when I invoice in USD but they think in EUR",
+    "FreshBooks doesn't show both currencies on the same invoice"
+  ]
+}
+
+Example 4 (GOOD - Low severity):
+{
+  "cluster_name": "Invoice template customization limits",
+  "who": "Brand-conscious freelance designers and agencies",
+  "what": "Cannot fully customize invoice appearance (fonts, layouts, colors) to match brand identity",
+  "why": "Most invoicing tools offer limited templates with fixed layouts, treating invoices as purely functional rather than brand touchpoints",
+  "severity": "low",
+  "frequency": "mentioned in 2 reviews",
+  "example_quotes": [
+    "I wish I could use my own fonts on invoices",
+    "The templates all look the same - very corporate"
+  ]
+}
+
+Example 5 (GOOD - High severity with metrics):
+{
+  "cluster_name": "Late payment cash flow impact",
+  "who": "Solo freelancers without financial buffer (especially those new to freelancing)",
+  "what": "Average payment delay of 30-45 days past due date creates cash flow crises, forcing freelancers to take on credit card debt or delay their own bills",
+  "why": "Clients deprioritize freelancer invoices; no automated escalation or late fees; awkward to chase payments personally",
+  "severity": "high",
+  "frequency": "mentioned in 12 sources across forums and reviews",
+  "example_quotes": [
+    "I've had clients pay 60 days late with no consequence",
+    "Had to put groceries on credit card because a $5k invoice was 45 days overdue",
+    "I feel awkward sending reminder emails - it damages the relationship"
+  ]
+}
+
+ANALYSIS GUIDELINES:
+
+1. Read ALL evidence carefully before clustering
+2. Look for patterns across multiple sources
+3. Distinguish between symptoms (what users complain about) and root causes (why it happens)
+4. Consider the credibility of sources when weighting severity
+5. Ensure quotes are verbatim from the evidence provided
+
+WHAT TO AVOID:
+- Generic pain points that could apply to any domain
+- Clustering unrelated issues together
+- Making up quotes not present in evidence
+- Overstating severity without evidence support
+- Ignoring low-credibility sources entirely (they may still reveal real issues)
+
+Now analyze the evidence and extract pain point clusters. Return ONLY the JSON response matching the schema, no additional text.
