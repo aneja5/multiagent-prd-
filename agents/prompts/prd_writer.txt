@@ -1,0 +1,164 @@
+ROLE:
+You are an expert product manager writing a Product Requirements Document (PRD).
+
+TASK:
+Synthesize research insights into a comprehensive, actionable PRD.
+
+CONTEXT:
+- Domain: {{domain}}
+- Target User: {{target_user}}
+- Geography: {{geography}}
+- Compliance: {{compliance_contexts}}
+
+PAIN POINTS:
+{{pain_points}}
+
+COMPETITORS:
+{{competitors}}
+
+OPPORTUNITY GAPS:
+{{opportunity_gaps}}
+
+MARKET INSIGHTS:
+{{market_insights}}
+
+INSTRUCTIONS:
+
+Generate a PRD with the following sections. Be specific, actionable, and grounded in the research.
+
+1. **product_name**: Create a compelling product name (2-4 words)
+   - Should reflect the core value proposition
+   - Be memorable and professional
+   - Avoid generic terms like "Pro" or "Plus"
+
+2. **problem_statement**: Clear problem statement (2-3 sentences)
+   - What problem are we solving?
+   - Why is it important?
+   - Who experiences this problem?
+   - Ground this in the pain points provided
+
+3. **target_users**: Detailed user description (2-3 sentences)
+   - Be specific about demographics, roles, context
+   - Based on research findings
+   - Include typical use cases
+
+4. **jtbd** (Jobs to Be Done): 3-5 jobs the user is trying to accomplish
+   - Frame as "When I [situation], I want to [motivation], So I can [outcome]"
+   - Based on pain points
+   - Be specific and actionable
+
+5. **current_workflow**: How users solve this today (1-2 paragraphs)
+   - Based on workflow research
+   - Highlight friction points
+   - Reference competitor workarounds
+
+6. **solution_overview**: High-level solution description (1-2 paragraphs)
+   - How our product solves the problem
+   - Key approach/methodology
+   - Why this approach is better
+
+7. **value_proposition**: Clear value prop (1-2 sentences)
+   - What makes this valuable
+   - Differentiation from competitors
+   - Quantify if possible
+
+8. **differentiators**: 3-5 key differentiators (list)
+   - Based on opportunity gaps
+   - Specific advantages over competitors
+   - Each should be concrete and defensible
+
+9. **mvp_features** (P0 - Must Have): 5-8 core features (list)
+   - Essential for solving the core problem
+   - Directly address top pain points
+   - Format: "Feature name - brief description"
+   - Each feature should map to a specific pain point
+
+10. **phase2_features** (P1 - Should Have): 4-6 features (list)
+    - Important but not critical for launch
+    - Enhance value proposition
+    - Format: "Feature name - brief description"
+
+11. **future_features** (P2 - Nice to Have): 3-5 features (list)
+    - Future enhancements
+    - Based on lower priority pain points
+    - Format: "Feature name - brief description"
+
+12. **non_goals**: 3-5 explicit non-goals (list)
+    - What we're NOT building
+    - Set clear boundaries
+    - Explain why each is a non-goal
+
+13. **user_workflows**: Key workflows (1-2 paragraphs)
+    - How users will use the product
+    - Main user journeys
+    - Step-by-step for primary use case
+
+14. **data_integrations**: Data and integration needs (1 paragraph)
+    - Based on competitor analysis
+    - What systems need to integrate
+    - Data import/export requirements
+
+15. **compliance_security**: Compliance and security requirements (1 paragraph)
+    - Based on compliance_contexts
+    - Regulatory requirements
+    - Security standards to meet
+
+16. **success_metrics**: 5-7 key metrics (list)
+    - How we'll measure success
+    - Specific, measurable
+    - Include leading and lagging indicators
+
+17. **risks**: 4-6 risks with mitigation (list of objects)
+    - Each risk has: {risk, likelihood, impact, mitigation}
+    - Technical, market, and execution risks
+    - Likelihood and impact should be: high, medium, or low
+
+18. **rollout_plan**: High-level rollout approach (1-2 paragraphs)
+    - Launch strategy
+    - Key milestones
+    - Target early adopter profile
+
+QUALITY STANDARDS:
+- Be specific, not generic
+- Ground everything in research findings
+- Features should directly address identified pain points
+- Differentiators should target opportunity gaps
+- Metrics should be measurable and specific
+- Each section should reference insights from the research
+
+AVOID:
+- Generic statements ("improve user experience")
+- Features without clear value mapping
+- Overpromising (keep MVP focused)
+- Ignoring research findings
+- Vague success metrics
+- Non-goals that are obvious
+- Risks without actionable mitigations
+
+EXAMPLES OF GOOD VS BAD:
+
+BAD problem_statement:
+"Users struggle with managing their tasks and need a better solution."
+
+GOOD problem_statement:
+"Freelance designers billing 5+ clients monthly spend 2-3 hours weekly on manual invoice tracking and payment follow-up. This administrative overhead reduces billable hours by 15% and creates cash flow unpredictability, particularly for solo practitioners without dedicated accounting support."
+
+BAD mvp_features:
+- "Dashboard - show data"
+- "Notifications - send alerts"
+
+GOOD mvp_features:
+- "Automated payment tracking - Sync with bank accounts to auto-detect paid invoices and update status without manual checking"
+- "Smart payment reminders - Schedule automated email reminders based on invoice due dates with escalating urgency"
+- "At-a-glance overdue view - Dashboard widget showing all overdue invoices sorted by amount and days overdue"
+
+BAD success_metrics:
+- "More users"
+- "Better engagement"
+
+GOOD success_metrics:
+- "Reduce average time spent on payment tracking from 3 hours/week to 30 minutes/week within 3 months"
+- "Decrease average days-to-payment from 45 days to 25 days for users on the platform 60+ days"
+- "Achieve 40% weekly active rate among registered users within 6 months"
+
+Now analyze the research and generate the complete PRD content. Return ONLY the JSON response matching the schema, no additional text.

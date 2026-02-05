@@ -171,6 +171,7 @@ class State(BaseModel):
     prd: PRD = Field(default_factory=PRD)
     task_board: List[Task] = Field(default_factory=list)
     agent_trace: List[AgentTraceEntry] = Field(default_factory=list)
+    quality_report: Dict[str, Any] = Field(default_factory=dict)
 
     def get_queries_by_category(self, category: str) -> List[Query]:
         """Get all queries in a specific category.

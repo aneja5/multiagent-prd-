@@ -16,7 +16,9 @@ from agents.clarification import ClarificationAgent
 from agents.competitors import CompetitorsAgent
 from agents.painpoints import PainPointsAgent
 from agents.planner import PlannerAgent
+from agents.prd_writer import PRDWriterAgent
 from agents.researcher import ResearcherAgent
+from agents.validation import ValidationAgent
 from app.config import get_config
 from app.logger import get_logger
 from app.state import AgentTraceEntry, State, Task, save_state
@@ -40,9 +42,8 @@ AGENT_REGISTRY: Dict[str, Type[BaseAgent]] = {
     "research": ResearcherAgent,
     "painpoints": PainPointsAgent,
     "competitors": CompetitorsAgent,
-    # More agents coming in future days:
-    # "prd_draft": PRDDraftAgent,
-    # "validation": ValidationAgent,
+    "prd_draft": PRDWriterAgent,
+    "validation": ValidationAgent,
 }
 
 # Task definitions for initial task board

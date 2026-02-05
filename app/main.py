@@ -58,6 +58,12 @@ Examples:
   python -m app.main --inspect <run_id> --painpoints
   python -m app.main --inspect <run_id> --competitors
   python -m app.main --inspect <run_id> --gaps
+
+  # Export PRD
+  python -m app.main --export <run_id>
+  python -m app.main --export <run_id> --format json
+  python -m app.main --export <run_id> --format markdown
+  python -m app.main --export <run_id> --output-dir ./my-exports/
         """
     )
 
@@ -145,6 +151,29 @@ Examples:
         "--verbose", "-v",
         action="store_true",
         help="Show detailed agent trace and execution logs"
+    )
+
+    # Export options
+    parser.add_argument(
+        "--export",
+        type=str,
+        metavar="RUN_ID",
+        help="Export PRD from a completed run"
+    )
+
+    parser.add_argument(
+        "--format",
+        type=str,
+        choices=["markdown", "json", "both"],
+        default="both",
+        help="Export format: markdown, json, or both (default: both)"
+    )
+
+    parser.add_argument(
+        "--output-dir",
+        type=str,
+        metavar="DIR",
+        help="Output directory for exports (default: data/outputs/)"
     )
 
     return parser
@@ -1194,6 +1223,331 @@ def inspect_gaps(run_id: str, console: Console) -> int:
         return 1
 
 
+def export_prd(
+    run_id: str,
+    console: Console,
+    format: str = "both",
+    output_dir: str = None
+) -> int:
+    """Export PRD from a completed run.
+
+    Args:
+        run_id: The run ID to export
+        console: Rich console instance for output
+        format: Export format (markdown, json, or both)
+        output_dir: Output directory (default: data/outputs/)
+
+    Returns:
+        Exit code (0 for success, 1 for error)
+    """
+    import json
+    import os
+
+    try:
+        # Load state
+        state = load_state(run_id)
+
+        log_section(f"Exporting PRD: {run_id[:8]}...", console)
+
+        # Check if PRD exists
+        if not state.prd.notion_markdown and not state.prd.sections:
+            log_error("No PRD found in this run. Make sure the PRD generation completed.")
+            return 1
+
+        # Set output directory
+        if output_dir:
+            out_dir = Path(output_dir)
+        else:
+            out_dir = Path("data/outputs")
+
+        # Create output directory if needed
+        out_dir.mkdir(parents=True, exist_ok=True)
+
+        # Generate filenames
+        product_name = state.prd.sections.get("product_name", "PRD")
+        safe_name = "".join(c if c.isalnum() or c in "-_ " else "" for c in product_name)
+        safe_name = safe_name.replace(" ", "_")[:30]
+
+        md_filename = f"{run_id[:8]}_{safe_name}_PRD.md"
+        json_filename = f"{run_id[:8]}_{safe_name}_PRD.json"
+
+        exported_files = []
+        total_size = 0
+
+        # Export Markdown
+        if format in ["markdown", "both"]:
+            md_path = out_dir / md_filename
+
+            if state.prd.notion_markdown:
+                md_content = state.prd.notion_markdown
+            else:
+                # Generate basic markdown from sections if notion_markdown not available
+                md_content = _generate_basic_markdown(state)
+
+            with open(md_path, "w", encoding="utf-8") as f:
+                f.write(md_content)
+
+            md_size = os.path.getsize(md_path)
+            total_size += md_size
+            exported_files.append({
+                "type": "Markdown",
+                "path": str(md_path),
+                "size": md_size
+            })
+
+        # Export JSON
+        if format in ["json", "both"]:
+            json_path = out_dir / json_filename
+
+            # Build comprehensive JSON export
+            json_export = {
+                "run_id": state.run_id,
+                "created_at": state.created_at,
+                "status": state.status,
+                "metadata": {
+                    "raw_idea": state.metadata.raw_idea,
+                    "domain": state.metadata.domain,
+                    "target_user": state.metadata.target_user,
+                    "geography": state.metadata.geography,
+                    "industry_tags": state.metadata.industry_tags,
+                    "compliance_contexts": state.metadata.compliance_contexts,
+                },
+                "prd": {
+                    "sections": state.prd.sections,
+                    "citation_map": state.prd.citation_map,
+                },
+                "insights": {
+                    "pain_points": [
+                        pp.model_dump() if hasattr(pp, 'model_dump') else pp
+                        for pp in state.insights.pain_points
+                    ],
+                    "competitors": [
+                        comp.model_dump() if hasattr(comp, 'model_dump') else comp
+                        for comp in state.insights.competitors
+                    ],
+                    "opportunity_gaps": state.insights.opportunity_gaps,
+                    "market_insights": state.insights.market_insights,
+                },
+                "quality_report": state.quality_report,
+                "evidence_summary": {
+                    "total_sources": len(state.evidence),
+                    "by_type": _count_by_field(state.evidence, "type"),
+                    "by_credibility": _count_by_field(state.evidence, "credibility"),
+                },
+            }
+
+            with open(json_path, "w", encoding="utf-8") as f:
+                json.dump(json_export, f, indent=2, ensure_ascii=False)
+
+            json_size = os.path.getsize(json_path)
+            total_size += json_size
+            exported_files.append({
+                "type": "JSON",
+                "path": str(json_path),
+                "size": json_size
+            })
+
+        # Get quality metrics
+        quality_score = state.quality_report.get("quality_score", "N/A") if state.quality_report else "N/A"
+        citation_coverage = state.quality_report.get("citation_coverage_pct", "N/A") if state.quality_report else "N/A"
+        passed = state.quality_report.get("passed", False) if state.quality_report else False
+
+        # Count sections
+        section_count = len([k for k, v in state.prd.sections.items() if v]) if state.prd.sections else 0
+
+        # Display results
+        _display_export_results(
+            console=console,
+            exported_files=exported_files,
+            total_size=total_size,
+            product_name=product_name,
+            quality_score=quality_score,
+            citation_coverage=citation_coverage,
+            passed=passed,
+            section_count=section_count,
+            evidence_count=len(state.evidence),
+            pain_points_count=len(state.insights.pain_points),
+            competitors_count=len(state.insights.competitors),
+        )
+
+        return 0
+
+    except FileNotFoundError:
+        log_error(f"Run not found: {run_id}")
+        return 1
+    except Exception as e:
+        log_error(f"Error exporting PRD: {e}")
+        return 1
+
+
+def _count_by_field(items: list, field: str) -> dict:
+    """Count items by a specific field.
+
+    Args:
+        items: List of items
+        field: Field to count by
+
+    Returns:
+        Dictionary of counts
+    """
+    counts = {}
+    for item in items:
+        if hasattr(item, field):
+            value = getattr(item, field)
+        elif isinstance(item, dict):
+            value = item.get(field, "unknown")
+        else:
+            value = "unknown"
+        counts[value] = counts.get(value, 0) + 1
+    return counts
+
+
+def _generate_basic_markdown(state: State) -> str:
+    """Generate basic markdown from PRD sections.
+
+    Args:
+        state: The state containing PRD sections
+
+    Returns:
+        Markdown string
+    """
+    sections = state.prd.sections
+    lines = []
+
+    lines.append(f"# {sections.get('product_name', 'Product Requirements Document')}")
+    lines.append("")
+
+    if sections.get("problem_statement"):
+        lines.append("## Problem Statement")
+        lines.append(sections["problem_statement"])
+        lines.append("")
+
+    if sections.get("target_users"):
+        lines.append("## Target Users")
+        lines.append(sections["target_users"])
+        lines.append("")
+
+    if sections.get("solution_overview"):
+        lines.append("## Solution Overview")
+        lines.append(sections["solution_overview"])
+        lines.append("")
+
+    if sections.get("value_proposition"):
+        lines.append("## Value Proposition")
+        lines.append(sections["value_proposition"])
+        lines.append("")
+
+    if sections.get("mvp_features"):
+        lines.append("## MVP Features")
+        for feature in sections["mvp_features"]:
+            lines.append(f"- {feature}")
+        lines.append("")
+
+    if sections.get("success_metrics"):
+        lines.append("## Success Metrics")
+        for metric in sections["success_metrics"]:
+            lines.append(f"- {metric}")
+        lines.append("")
+
+    lines.append("---")
+    lines.append(f"*Run ID: {state.run_id}*")
+
+    return "\n".join(lines)
+
+
+def _display_export_results(
+    console: Console,
+    exported_files: list,
+    total_size: int,
+    product_name: str,
+    quality_score,
+    citation_coverage,
+    passed: bool,
+    section_count: int,
+    evidence_count: int,
+    pain_points_count: int,
+    competitors_count: int,
+) -> None:
+    """Display export results with rich formatting.
+
+    Args:
+        console: Rich console instance
+        exported_files: List of exported file info
+        total_size: Total size in bytes
+        product_name: Product name
+        quality_score: Quality score
+        citation_coverage: Citation coverage percentage
+        passed: Whether validation passed
+        section_count: Number of PRD sections
+        evidence_count: Number of evidence items
+        pain_points_count: Number of pain points
+        competitors_count: Number of competitors
+    """
+    # Format file size
+    def format_size(size_bytes: int) -> str:
+        if size_bytes < 1024:
+            return f"{size_bytes} B"
+        elif size_bytes < 1024 * 1024:
+            return f"{size_bytes / 1024:.1f} KB"
+        else:
+            return f"{size_bytes / (1024 * 1024):.1f} MB"
+
+    # Success panel
+    status_color = "green" if passed else "yellow"
+    status_text = "PASSED" if passed else "NEEDS REVIEW"
+
+    quality_display = f"{quality_score:.0f}/100" if isinstance(quality_score, (int, float)) else str(quality_score)
+    citation_display = f"{citation_coverage:.0f}%" if isinstance(citation_coverage, (int, float)) else str(citation_coverage)
+
+    console.print(Panel.fit(
+        f"[bold green]Export Successful![/bold green]\n\n"
+        f"[bold]Product:[/bold] {product_name}\n"
+        f"[bold]Validation:[/bold] [{status_color}]{status_text}[/{status_color}]",
+        title="PRD Export",
+        border_style="green"
+    ))
+    console.print()
+
+    # Files table
+    files_table = Table(title="Exported Files", show_header=True, header_style="bold cyan")
+    files_table.add_column("Format", style="yellow", width=12)
+    files_table.add_column("Path", style="white")
+    files_table.add_column("Size", style="green", justify="right", width=12)
+
+    for f in exported_files:
+        files_table.add_row(
+            f["type"],
+            f["path"],
+            format_size(f["size"])
+        )
+
+    console.print(files_table)
+    console.print(f"\n[bold]Total Size:[/bold] {format_size(total_size)}")
+    console.print()
+
+    # Quality metrics table
+    metrics_table = Table(title="PRD Metrics", show_header=True, header_style="bold magenta")
+    metrics_table.add_column("Metric", style="cyan", width=25)
+    metrics_table.add_column("Value", style="white", width=20)
+
+    metrics_table.add_row("Quality Score", quality_display)
+    metrics_table.add_row("Citation Coverage", citation_display)
+    metrics_table.add_row("PRD Sections", str(section_count))
+    metrics_table.add_row("Evidence Sources", str(evidence_count))
+    metrics_table.add_row("Pain Points", str(pain_points_count))
+    metrics_table.add_row("Competitors Analyzed", str(competitors_count))
+
+    console.print(metrics_table)
+    console.print()
+
+    # Usage hints
+    log_success("PRD exported successfully!")
+    console.print("\n[dim]You can now:[/dim]")
+    console.print(f"  [dim]• Open the Markdown file in any editor[/dim]")
+    console.print(f"  [dim]• Import to Notion using the markdown[/dim]")
+    console.print(f"  [dim]• Use the JSON for programmatic access[/dim]")
+
+
 def main() -> int:
     """Main entry point for the CLI.
 
@@ -1219,6 +1573,15 @@ def main() -> int:
     if args.list:
         display_runs_table(console)
         return 0
+
+    # Handle --export
+    if args.export:
+        return export_prd(
+            args.export,
+            console,
+            format=args.format,
+            output_dir=args.output_dir
+        )
 
     # Handle --inspect with various sub-options
     if args.inspect:
